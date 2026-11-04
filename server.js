@@ -1,0 +1,143 @@
+// =====================================================================
+// ARES · servidor
+// Serve a interface (public/) e faz a ponte segura com a API do Claude.
+// A chave da API fica só aqui, no servidor (arquivo .env).
+//   npm install && npm start  →  http://localhost:3000
+// =====================================================================
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import Anthropic from '@anthropic-ai/sdk';
+
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
+const PUBLIC = path.join(ROOT, 'public');
+
+// .env simples (sem dependência extra)
+try {
+  for (const line of fs.readFileSync(path.join(ROOT, '.env'), 'utf8').split('\n')) {
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+    if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^['"]|['"]$/g, '');
+  }
+} catch {}
+
+const PORT = Number(process.env.PORT || 3000);
+const MODEL = process.env.ARES_MODEL || 'claude-opus-5-5';
+const HAS_KEY = Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+const client = HAS_KEY ? new Anthropic() : null;
+
+const EFFORTS = new Set(['low', 'medium', 'high', 'xhigh', 'max']);
+
+const BASE = `Você é a Ares, uma inteligência artificial com identidade própria: direta, estratégica, confiante e precisa, \
+como uma comandante experiente. Fale em português do Brasil, a não ser que a pessoa escreva em outra língua. \
+Trate a pessoa como "comandante" só de vez em quando, sem exagero. Vá direto ao ponto, sem rodeios nem bajulação. \
+Use Markdown quando ajudar (títulos curtos, listas, tabelas, blocos de código). Nunca invente fatos, números ou fontes: \
+quando não souber ou não tiver certeza, diga isso claramente.`;
+
+const MODES = {
+  estrategista: 'Modo ESTRATEGISTA: transforme objetivos em planos de ação. Organize por prioridade, aponte riscos e prazos realistas e termine sempre com o próximo passo concreto.',
+  forja: 'Modo FORJA: você é uma engenheira de software sênior. Entregue código completo e funcional, explique a causa dos erros antes da correção, siga as convenções da linguagem e sugira testes.',
+  oraculo: 'Modo ORÁCULO: explique com clareza, em camadas (do simples ao técnico), com exemplos e analogias. Separe o que é consenso do que é incerto.',
+  escriba: 'Modo ESCRIBA: escreva com voz humana e natural, adaptando o tom ao público. Evite clichês e frases de efeito vazias. Ofereça versão curta quando fizer sentido.',
+  sentinela: 'Modo SENTINELA: faça uma revisão crítica honesta. Liste falhas e riscos por gravidade, questione premissas fracas e proponha como mitigar cada problema.',
+  arauto: 'Modo ARAUTO: estrategista de marketing e conteúdo. Crie ganchos fortes, posicionamento claro e ideias adaptadas a cada rede, sem prometer resultados que não dá para garantir.'
+};
+
+const TYPES = {
+  '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.json': 'application/json', '.webmanifest': 'application/manifest+json'
+};
+
+function readBody(req, limit = 2_000_000) {
+  return new Promise((resolve, reject) => {
+    let size = 0; const chunks = [];
+    req.on('data', c => { size += c.length; if (size > limit) { reject(new Error('Mensagem grande demais.')); req.destroy(); } else chunks.push(c); });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
+function cleanMessages(list) {
+  if (!Array.isArray(list)) return [];
+  const out = list
+    .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
+    .slice(-60)
+    .map(m => ({ role: m.role, content: m.content.slice(0, 100_000) }));
+  while (out.length && out[0].role !== 'user') out.shift();
+  return out;
+}
+
+async function chat(req, res) {
+  if (!client) { res.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('Núcleo sem chave da API. Configure o .env.'); }
+  let body;
+  try { body = JSON.parse(await readBody(req)); } catch (e) { res.writeHead(400); return res.end('JSON inválido.'); }
+  const messages = cleanMessages(body.messages);
+  if (!messages.length || messages.at(-1).role !== 'user') { res.writeHead(400); return res.end('A última mensagem precisa ser do usuário.'); }
+  const system = `${BASE}\n\n${MODES[body.mode] || MODES.estrategista}`;
+  const effort = EFFORTS.has(body.effort) ? body.effort : 'high';
+
+  res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
+  const send = obj => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+  const ac = new AbortController();
+  res.on('close', () => ac.abort());
+
+  try {
+    const stream = client.beta.messages.stream({
+      model: MODEL,
+      max_tokens: 64000,
+      system,
+      messages,
+      thinking: { type: 'adaptive' },
+      output_config: { effort },
+      // se o modelo recusar por segurança, a API tenta de novo com o modelo reserva recomendado
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default'
+    }, { signal: ac.signal });
+
+    for await (const ev of stream) {
+      if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') send({ type: 'text', text: ev.delta.text });
+    }
+    const final = await stream.finalMessage();
+    if (final.stop_reason === 'refusal') send({ type: 'error', message: 'A Ares não pode responder a este pedido.' });
+    else if (final.stop_reason === 'max_tokens') send({ type: 'text', text: '\n\n_(resposta cortada no limite de tamanho)_' });
+    send({ type: 'done', usage: { input_tokens: final.usage?.input_tokens || 0, output_tokens: final.usage?.output_tokens || 0 }, stop_reason: final.stop_reason });
+  } catch (err) {
+    if (!ac.signal.aborted) {
+      const status = err?.status;
+      const message = status === 401 ? 'Chave da API inválida.'
+        : status === 429 ? 'Limite de uso atingido. Tente de novo em instantes.'
+        : status >= 500 ? 'O serviço da IA está instável. Tente de novo.'
+        : (err?.message || 'Erro desconhecido.');
+      console.error('[ares] erro na API:', status || '', err?.message);
+      send({ type: 'error', message });
+    }
+  }
+  res.end();
+}
+
+function serveStatic(req, res) {
+  const url = new URL(req.url, 'http://x');
+  let rel = decodeURIComponent(url.pathname);
+  if (rel.endsWith('/')) rel += 'index.html';
+  const file = path.normalize(path.join(PUBLIC, rel));
+  if (!file.startsWith(PUBLIC + path.sep)) { res.writeHead(403); return res.end(); }
+  fs.readFile(file, (err, data) => {
+    if (err) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('Não encontrado'); }
+    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
+    res.end(data);
+  });
+}
+
+http.createServer((req, res) => {
+  const p = new URL(req.url, 'http://x').pathname;
+  if (p === '/api/status') {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify({ online: HAS_KEY, model: HAS_KEY ? MODEL : null }));
+  }
+  if (p === '/api/chat' && req.method === 'POST') return chat(req, res);
+  if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); return res.end(); }
+  serveStatic(req, res);
+}).listen(PORT, () => {
+  console.log(`\n  ARES online em http://localhost:${PORT}`);
+  console.log(HAS_KEY ? `  Núcleo: ${MODEL}\n` : '  Núcleo: modo demonstração (defina ANTHROPIC_API_KEY no .env)\n');
+});

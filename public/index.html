@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="ciano">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ares</title>
+<meta name="description" content="Ares: inteligência artificial tática.">
+<meta name="theme-color" content="#030304">
+<link rel="icon" href="assets/ares-logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,300;0,400;0,500;0,600;0,700;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/ares.css">
+</head>
+<body>
+
+<!-- Logo como símbolo reutilizável (o path é preenchido por js/logo-path.js) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="logo" viewBox="0 0 721 885"><path id="logoPath" fill-rule="evenodd" fill="currentColor"/></symbol>
+    <pattern id="hexPat" width="56" height="97" patternUnits="userSpaceOnUse" patternTransform="scale(.62)">
+      <path d="M28 0 56 16.2v32.4L28 64.8 0 48.6V16.2zM28 64.8 56 81v32.4M0 81l28-16.2M0 81v32.4" fill="none" stroke="currentColor" stroke-width="1"/>
+    </pattern>
+  </defs>
+</svg>
+
+<!-- ===== Fundo: galáxia + grade hexagonal + aurora (efeitos-ui-animados) ===== -->
+<div class="bg" aria-hidden="true">
+  <div class="aurora"><i></i><i></i><i></i></div>
+  <canvas id="galaxy"></canvas>
+  <svg class="hex" width="100%" height="100%"><rect width="100%" height="100%" fill="url(#hexPat)"/></svg>
+  <div class="vignette"></div>
+  <div class="grain"></div>
+</div>
+<div class="cursor" id="cursor" aria-hidden="true"></div>
+
+<div class="app" id="app">
+
+  <!-- ===== Sidebar de vidro (glassy-sidebar) ===== -->
+  <aside class="sidebar" id="sidebar" aria-label="Navegação">
+    <div class="themes" role="radiogroup" aria-label="Tema">
+      <button class="tdot" data-theme-set="mono" role="radio" aria-label="Tema preto e branco" title="Preto e branco"></button>
+      <button class="tdot" data-theme-set="ciano" role="radio" aria-label="Tema ciano" title="Ciano"></button>
+      <button class="tdot" data-theme-set="vermelho" role="radio" aria-label="Tema vermelho" title="Vermelho"></button>
+    </div>
+
+    <div class="brand">
+      <svg class="brand-logo"><use href="#logo"/></svg>
+      <span class="brand-name shiny">ARES</span>
+      <button class="toggle" id="toggle" aria-label="Recolher menu">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+    </div>
+
+    <div class="user">
+      <div class="avatar">N</div>
+      <div class="meta"><b>Nathanael</b><small>Comandante</small></div>
+      <span class="status-dot" id="statusDot" title="Status do núcleo"></span>
+    </div>
+
+    <div class="label"><span>MENU</span></div>
+    <nav id="nav">
+      <div class="pill" id="pill"></div>
+      <a class="item active" href="#arena" data-view="arena">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20 20 4M14 4h6v6M4 14l6 6M7 17l-3 3"/></svg><span class="txt">Arena</span></a>
+      <a class="item" href="#arsenal" data-view="arsenal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"/><path d="M12 8v8M8 12h8"/></svg><span class="txt">Arsenal</span><span class="badge" id="modeBadge">6</span></a>
+      <a class="item" href="#comando" data-view="comando">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="txt">Comando</span></a>
+      <a class="item" href="#historico" data-view="historico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="txt">Histórico</span></a>
+      <hr>
+      <a class="item" href="#" data-action="new">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg><span class="txt">Nova batalha</span></a>
+    </nav>
+
+    <div class="sb-foot">
+      <span class="core" id="coreLabel">NÚCLEO · VERIFICANDO</span>
+    </div>
+  </aside>
+
+  <!-- ===== Palco principal ===== -->
+  <main class="stage" id="stage">
+
+    <!-- ARENA: conversa -->
+    <section class="view active" id="view-arena" aria-label="Arena">
+      <header class="topbar">
+        <div class="crumbs mono"><span>ARES</span><i>//</i><span id="crumbMode">ESTRATEGISTA</span><i>//</i><span id="crumbClock">--:--</span></div>
+        <div class="top-actions">
+          <button class="chip ghost" data-action="new">Nova batalha</button>
+        </div>
+      </header>
+
+      <div class="scroll" id="scroll">
+        <div class="hero" id="hero">
+          <div class="hero-logo tilt" id="heroLogo">
+            <svg class="logo-fill"><use href="#logo"/></svg>
+            <span class="scan"></span>
+          </div>
+          <h1 class="hero-title"><span class="masked" data-text="ARES">ARES</span></h1>
+          <p class="hero-sub split" id="heroSub">Estratégia, força e precisão. O que vamos conquistar hoje?</p>
+          <div class="seeds" id="seeds"></div>
+        </div>
+        <div class="thread" id="thread" aria-live="polite"></div>
+      </div>
+      <div class="gblur top" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="gblur bottom" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+
+      <!-- Compositor + barra de modo (player do carrossel) -->
+      <div class="dock">
+        <div class="player glass" id="player">
+          <button class="pbtn" data-mode-step="-1" aria-label="Modo anterior"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+          <button class="pnow" id="pnow" aria-label="Abrir Arsenal">
+            <span class="pthumb" id="pthumb"></span>
+            <span class="ptext"><b id="pname">Estrategista</b><small id="pdesc">Planos, decisões e próximos passos</small></span>
+            <span class="eq" id="eq"><i></i><i></i><i></i><i></i></span>
+          </button>
+          <button class="pbtn" data-mode-step="1" aria-label="Próximo modo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+          <button class="pbtn" id="shuffle" aria-label="Modo aleatório"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg></button>
+        </div>
+
+        <form class="composer" id="composer" autocomplete="off">
+          <textarea id="input" rows="1" placeholder="Dê a ordem, comandante…" aria-label="Mensagem para a Ares"></textarea>
+          <button class="send magnet" id="send" type="submit" aria-label="Enviar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+          </button>
+        </form>
+        <p class="fine mono" id="fine">ENTER envia · SHIFT+ENTER quebra linha</p>
+      </div>
+    </section>
+
+    <!-- ARSENAL: carrossel de vidro (carrossel-vidro-cinema) -->
+    <section class="view" id="view-arsenal" aria-label="Arsenal">
+      <header class="view-head">
+        <p class="mono kicker">ARSENAL // MODOS DE BATALHA</p>
+        <h2 class="split">Escolha como a Ares vai lutar.</h2>
+      </header>
+      <div class="carousel" id="carousel" role="listbox" aria-label="Modos da Ares" tabindex="0"></div>
+      <div class="cnav">
+        <button class="pbtn" data-c-step="-1" aria-label="Anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <div class="cdots" id="cdots"></div>
+        <button class="pbtn" data-c-step="1" aria-label="Próximo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+    </section>
+
+    <!-- COMANDO: dashboard (dashboard-saas-premium) -->
+    <section class="view" id="view-comando" aria-label="Comando">
+      <header class="view-head">
+        <p class="mono kicker">COMANDO // RELATÓRIO DE CAMPO</p>
+        <h2 class="split">Seu histórico com a Ares, em números.</h2>
+      </header>
+      <div class="dash" id="dash"></div>
+    </section>
+
+    <!-- HISTÓRICO -->
+    <section class="view" id="view-historico" aria-label="Histórico">
+      <header class="view-head">
+        <p class="mono kicker">HISTÓRICO // BATALHAS</p>
+        <h2 class="split">Retome de onde parou.</h2>
+      </header>
+      <div class="history" id="history"></div>
+    </section>
+  </main>
+
+  <!-- ===== Painel tático espacial (ui-espacial-vidro) ===== -->
+  <aside class="rail" id="rail" aria-label="Painel tático">
+    <div class="spatial glass" id="spatial">
+      <div class="w w-clock">
+        <span class="mono wl">HORA LOCAL</span>
+        <b id="clock">--:--</b>
+        <small id="date">—</small>
+      </div>
+
+      <div class="w w-dial">
+        <span class="mono wl">FÚRIA <em>esforço do raciocínio</em></span>
+        <div class="dial" id="furyDial" role="slider" tabindex="0" aria-label="Fúria" aria-valuemin="0" aria-valuemax="4">
+          <svg viewBox="0 0 200 200">
+            <path class="arc-bg" d="M38 156A80 80 0 1 1 162 156"/>
+            <path class="arc-fg" id="furyArc" d="M38 156A80 80 0 1 1 162 156"/>
+            <circle class="knob" id="furyKnob" r="9" cx="38" cy="156"/>
+          </svg>
+          <div class="dial-val"><b id="furyVal">Alta</b><small id="furyHint">análise profunda</small></div>
+        </div>
+        <div class="steps"><button data-fury="-1" aria-label="Diminuir fúria">−</button><button data-fury="1" aria-label="Aumentar fúria">+</button></div>
+      </div>
+
+      <div class="w w-dial">
+        <span class="mono wl">BRILHO <em>intensidade do tema</em></span>
+        <div class="dial" id="glowDial" role="slider" tabindex="0" aria-label="Brilho" aria-valuemin="0" aria-valuemax="100">
+          <svg viewBox="0 0 200 200">
+            <path class="arc-bg" d="M38 156A80 80 0 1 1 162 156"/>
+            <path class="arc-fg" id="glowArc" d="M38 156A80 80 0 1 1 162 156"/>
+            <circle class="knob" id="glowKnob" r="9" cx="38" cy="156"/>
+          </svg>
+          <div class="dial-val"><b id="glowVal">70%</b><small>aura</small></div>
+        </div>
+      </div>
+
+      <div class="w w-core">
+        <span class="mono wl">NÚCLEO</span>
+        <div class="core-row"><span class="ring" id="coreRing"></span><div><b id="coreState">Verificando</b><small id="coreModel">—</small></div></div>
+        <div class="core-stats mono"><span>ENTRADA <b id="tkIn">0</b></span><span>SAÍDA <b id="tkOut">0</b></span></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- Modal do modo (FLIP a partir do card) -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-card glass" id="modalCard" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button class="x" id="modalClose" aria-label="Fechar">×</button>
+    <div class="modal-cover" id="modalCover"></div>
+    <div class="modal-body">
+      <p class="mono kicker" id="modalKicker"></p>
+      <h3 id="modalTitle"></h3>
+      <p id="modalText"></p>
+      <ul class="modal-list" id="modalList"></ul>
+      <div class="modal-actions">
+        <button class="btn solid magnet" id="modalGo">Entrar na arena</button>
+        <button class="btn ghost" id="modalCancel">Voltar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/logo-path.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
