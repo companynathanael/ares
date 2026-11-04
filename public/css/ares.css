@@ -203,6 +203,8 @@ kbd{margin-left:auto;font-family:var(--mono);font-size:10px;min-width:20px;heigh
   transform:translateZ(-120px) scale(.97);filter:blur(10px);
   transition:opacity .55s var(--ease),transform .7s var(--ease),filter .55s var(--ease)}
 .view.active{opacity:1;pointer-events:auto;transform:none;filter:none}
+/* nada de uma tela escondida pode receber clique (nem as abas abertas dentro dela) */
+.view:not(.active),.view:not(.active) *{pointer-events:none!important}
 
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 6px 0;height:40px;flex:none}
 .crumbs{font-size:11px;color:var(--ink-3);display:flex;gap:10px}
