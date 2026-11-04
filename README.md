@@ -10,7 +10,23 @@ npm install
 npm start                 # http://localhost:3000
 ```
 
+Para gerar a versão em arquivo único (`dist/index.html`, abre direto no navegador):
+
+```bash
+npm run build
+```
+
 Sem a chave, a Ares abre em **modo demonstração**: a interface funciona inteira, mas a resposta é fixa e ensina a ligar o núcleo.
+
+## Login
+
+A Ares abre numa tela de login. Sem senha configurada, ela pede só o **codinome** (fica salvo no navegador).
+Com `ARES_SENHA=...` no `.env`, a tela pede também a senha e o servidor só responde a quem entrou
+(sessão em cookie HttpOnly de 7 dias e no máximo 5 tentativas por minuto). O botão de sair fica no rodapé do menu.
+
+## Atalhos
+
+`1` Arena · `2` Arsenal · `3` Comando · `4` Histórico · `N` nova batalha · `P` painel tático · `Esc` fecha
 
 ## Temas
 
@@ -28,10 +44,10 @@ Fonte: **Chakra Petch** (sans-serif angular, combina com os chanfros da logo) e 
 
 | Skill | Onde |
 |---|---|
-| glassy-sidebar | Menu lateral de vidro com pílula que desliza no hover, badge, cartão do usuário e botão que recolhe para só ícones |
+| glassy-sidebar | Menu lateral de vidro com pílula que desliza no hover, badges, atalhos, conversas recentes, status do núcleo com botão de sair e botão que recolhe para só ícones (com dicas ao passar o mouse) |
 | carrossel-vidro-cinema | **Arsenal**: carrossel 3D dos 6 modos (setas, swipe, roda do mouse), card que vira modal (FLIP) e a barra de player sobre o campo de mensagem, com equalizador que anima enquanto a Ares responde |
 | efeitos-ui-animados | Galáxia com estrelas cadentes e repulsão do mouse, grade hexagonal que acende sob o cursor, aurora, texto brilhante, título revelado, split/blur text, desfoque gradual na conversa, botão magnético, tilt, contador e cursor próprio |
-| ui-espacial-vidro | Painel tático à direita, que inclina com o mouse: relógio, dial **Fúria** (quanto a IA pensa: baixa → máxima), dial **Brilho** (intensidade do neon) e status do núcleo com tokens |
+| ui-espacial-vidro | Painel tático em gaveta (botão **Painel** ou tecla `P`), que inclina com o mouse: relógio, dial **Fúria** (quanto a IA pensa: baixa → máxima), dial **Brilho** (intensidade do neon) e status do núcleo com tokens |
 | dashboard-saas-premium | **Comando**: números reais das suas conversas, gráfico de ordens por dia, modos mais usados e batalhas recentes |
 
 ## Modos (Arsenal)
@@ -50,6 +66,7 @@ public/js/app.js     menu, carrossel, conversa, painel, relatório, histórico
 public/assets/ares-logo.svg   logo vetorizada
 ```
 
+- Login: `ARES_SENHA` no `.env` (opcional).
 - Modelo padrão: `claude-opus-5-5` (troque com `ARES_MODEL` no `.env`).
 - A chave fica só no servidor. As conversas ficam salvas no `localStorage` do navegador.
 - Se o modelo recusar um pedido por segurança, a API tenta de novo sozinha com o modelo reserva recomendado (`fallbacks: "default"`).

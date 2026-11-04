@@ -8,6 +8,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import crypto from 'node:crypto';
 import Anthropic from '@anthropic-ai/sdk';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -25,6 +26,49 @@ const PORT = Number(process.env.PORT || 3000);
 const MODEL = process.env.ARES_MODEL || 'claude-opus-5-5';
 const HAS_KEY = Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
 const client = HAS_KEY ? new Anthropic() : null;
+
+// ---------- login opcional ----------
+// Com ARES_SENHA no .env, a tela de login pede a senha e a API só responde a quem entrou.
+const SENHA = process.env.ARES_SENHA || '';
+const sessions = new Map();               // token -> expira em (ms)
+const attempts = new Map();               // ip -> { n, reset }
+const SESSION_MS = 1000 * 60 * 60 * 24 * 7;
+
+function cookies(req) {
+  return Object.fromEntries((req.headers.cookie || '').split(';').map(c => c.trim().split('=')).filter(c => c[0]).map(([k, ...v]) => [k, v.join('=')]));
+}
+function isAuthed(req) {
+  if (!SENHA) return true;
+  const t = cookies(req).ares_sid, exp = t && sessions.get(t);
+  if (!exp) return false;
+  if (exp < Date.now()) { sessions.delete(t); return false; }
+  return true;
+}
+function sameSecret(a, b) {
+  const ha = crypto.createHash('sha256').update(a).digest(), hb = crypto.createHash('sha256').update(b).digest();
+  return crypto.timingSafeEqual(ha, hb);
+}
+async function loginRoute(req, res) {
+  const ip = req.socket.remoteAddress || '?', now = Date.now();
+  const a = attempts.get(ip) || { n: 0, reset: now + 60_000 };
+  if (now > a.reset) { a.n = 0; a.reset = now + 60_000; }
+  if (a.n >= 5) { res.writeHead(429); return res.end('Muitas tentativas.'); }
+  let senha = '';
+  try { senha = String(JSON.parse(await readBody(req, 10_000)).senha || ''); } catch {}
+  if (!SENHA) { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end('{"ok":true}'); }
+  if (!sameSecret(senha, SENHA)) { a.n++; attempts.set(ip, a); res.writeHead(401); return res.end('Senha incorreta.'); }
+  attempts.delete(ip);
+  const token = crypto.randomBytes(32).toString('hex');
+  sessions.set(token, now + SESSION_MS);
+  res.writeHead(200, { 'Content-Type': 'application/json',
+    'Set-Cookie': `ares_sid=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_MS / 1000}` });
+  res.end('{"ok":true}');
+}
+function logoutRoute(req, res) {
+  const t = cookies(req).ares_sid; if (t) sessions.delete(t);
+  res.writeHead(200, { 'Content-Type': 'application/json', 'Set-Cookie': 'ares_sid=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0' });
+  res.end('{"ok":true}');
+}
 
 const EFFORTS = new Set(['low', 'medium', 'high', 'xhigh', 'max']);
 
@@ -68,6 +112,7 @@ function cleanMessages(list) {
 }
 
 async function chat(req, res) {
+  if (!isAuthed(req)) { res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('Entre com a senha primeiro.'); }
   if (!client) { res.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('Núcleo sem chave da API. Configure o .env.'); }
   let body;
   try { body = JSON.parse(await readBody(req)); } catch (e) { res.writeHead(400); return res.end('JSON inválido.'); }
@@ -132,12 +177,15 @@ http.createServer((req, res) => {
   const p = new URL(req.url, 'http://x').pathname;
   if (p === '/api/status') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    return res.end(JSON.stringify({ online: HAS_KEY, model: HAS_KEY ? MODEL : null }));
+    return res.end(JSON.stringify({ online: HAS_KEY, model: HAS_KEY ? MODEL : null, auth: { required: Boolean(SENHA), ok: isAuthed(req) } }));
   }
+  if (p === '/api/login' && req.method === 'POST') return loginRoute(req, res);
+  if (p === '/api/logout' && req.method === 'POST') return logoutRoute(req, res);
   if (p === '/api/chat' && req.method === 'POST') return chat(req, res);
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); return res.end(); }
   serveStatic(req, res);
 }).listen(PORT, () => {
   console.log(`\n  ARES online em http://localhost:${PORT}`);
+  console.log(SENHA ? '  Login: protegido por senha (ARES_SENHA)' : '  Login: sem senha (defina ARES_SENHA no .env para proteger)');
   console.log(HAS_KEY ? `  Núcleo: ${MODEL}\n` : '  Núcleo: modo demonstração (defina ANTHROPIC_API_KEY no .env)\n');
 });

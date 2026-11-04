@@ -34,7 +34,64 @@
 </div>
 <div class="cursor" id="cursor" aria-hidden="true"></div>
 
-<div class="app" id="app">
+<!-- ===== Tela de login ===== -->
+<section class="login" id="login" aria-label="Entrar na Ares" hidden>
+  <div class="login-side">
+    <div class="login-logo" id="loginLogo">
+      <span class="orbit o1"></span><span class="orbit o2"></span>
+      <svg class="logo-fill"><use href="#logo"/></svg>
+      <span class="scan"></span>
+    </div>
+    <p class="mono kicker login-kicker">SISTEMA ARES // ACESSO</p>
+    <h2 class="login-title split" id="loginTitle">Identifique-se, comandante.</h2>
+    <p class="login-copy">Estratégia, força e precisão. Uma IA que pensa como general.</p>
+    <ul class="login-feats mono">
+      <li><b>06</b> modos de batalha</li>
+      <li><b>05</b> níveis de fúria</li>
+      <li><b>03</b> temas</li>
+    </ul>
+  </div>
+
+  <form class="login-card" id="loginForm" autocomplete="on" novalidate>
+    <span class="corner tl"></span><span class="corner br"></span>
+    <div class="lc-head">
+      <svg class="lc-logo"><use href="#logo"/></svg>
+      <div><b>Acesso ao núcleo</b><small class="mono" id="loginStatus">VERIFICANDO NÚCLEO…</small></div>
+    </div>
+
+    <label class="field">
+      <span class="mono">CODINOME</span>
+      <input id="loginName" name="username" autocomplete="username" maxlength="32" placeholder="Como a Ares deve te chamar" required>
+      <i class="field-line"></i>
+    </label>
+    <label class="field" id="passField">
+      <span class="mono">SENHA DE ACESSO</span>
+      <input id="loginPass" name="password" type="password" autocomplete="current-password" maxlength="128" placeholder="••••••••">
+      <button type="button" class="eye" id="eye" aria-label="Mostrar senha">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/></svg>
+      </button>
+      <i class="field-line"></i>
+    </label>
+    <p class="login-note" id="loginNote"></p>
+    <p class="login-err" id="loginErr" role="alert"></p>
+
+    <button class="btn solid login-go" id="loginGo" type="submit">
+      <span>Entrar na arena</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+    </button>
+
+    <div class="lc-foot">
+      <div class="themes inline" role="radiogroup" aria-label="Tema">
+        <button type="button" class="tdot" data-theme-set="mono" role="radio" aria-label="Tema preto e branco"></button>
+        <button type="button" class="tdot" data-theme-set="ciano" role="radio" aria-label="Tema ciano"></button>
+        <button type="button" class="tdot" data-theme-set="vermelho" role="radio" aria-label="Tema vermelho"></button>
+      </div>
+      <span class="mono" id="loginClock">--:--</span>
+    </div>
+  </form>
+</section>
+
+<div class="app locked" id="app" inert>
 
   <!-- ===== Sidebar de vidro (glassy-sidebar) ===== -->
   <aside class="sidebar" id="sidebar" aria-label="Navegação">
@@ -46,36 +103,49 @@
 
     <div class="brand">
       <svg class="brand-logo"><use href="#logo"/></svg>
-      <span class="brand-name shiny">ARES</span>
+      <span class="brand-meta mono"><b>IA TÁTICA</b><small>v1.1 · <span id="brandMode">ESTRATEGISTA</span></small></span>
       <button class="toggle" id="toggle" aria-label="Recolher menu">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
     </div>
 
     <div class="user">
-      <div class="avatar">N</div>
-      <div class="meta"><b>Nathanael</b><small>Comandante</small></div>
+      <div class="avatar" id="avatar">?</div>
+      <div class="meta"><b id="userName">—</b><small id="userRole">Comandante</small></div>
       <span class="status-dot" id="statusDot" title="Status do núcleo"></span>
     </div>
+
+    <button class="search" id="sbNew" data-action="new">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="txt">Nova batalha</span><kbd class="txt">N</kbd>
+    </button>
 
     <div class="label"><span>MENU</span></div>
     <nav id="nav">
       <div class="pill" id="pill"></div>
-      <a class="item active" href="#arena" data-view="arena">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20 20 4M14 4h6v6M4 14l6 6M7 17l-3 3"/></svg><span class="txt">Arena</span></a>
-      <a class="item" href="#arsenal" data-view="arsenal">
+      <a class="item active" href="#arena" data-view="arena" data-tip="Arena">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20 20 4M14 4h6v6M4 14l6 6M7 17l-3 3"/></svg><span class="txt">Arena</span><kbd class="txt">1</kbd></a>
+      <a class="item" href="#arsenal" data-view="arsenal" data-tip="Arsenal">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"/><path d="M12 8v8M8 12h8"/></svg><span class="txt">Arsenal</span><span class="badge" id="modeBadge">6</span></a>
-      <a class="item" href="#comando" data-view="comando">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="txt">Comando</span></a>
-      <a class="item" href="#historico" data-view="historico">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="txt">Histórico</span></a>
-      <hr>
-      <a class="item" href="#" data-action="new">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg><span class="txt">Nova batalha</span></a>
+      <a class="item" href="#comando" data-view="comando" data-tip="Comando">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="txt">Comando</span><kbd class="txt">3</kbd></a>
+      <a class="item" href="#historico" data-view="historico" data-tip="Histórico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="txt">Histórico</span><span class="badge ghost" id="histBadge">0</span></a>
+      <a class="item" href="#" data-action="panel" data-tip="Painel tático">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M12 5V3M5 13H3M21 13h-2"/></svg><span class="txt">Painel tático</span><kbd class="txt">P</kbd></a>
     </nav>
 
+    <div class="label recent-label"><span>RECENTES</span></div>
+    <div class="sb-recent" id="sbRecent"></div>
+
     <div class="sb-foot">
-      <span class="core" id="coreLabel">NÚCLEO · VERIFICANDO</span>
+      <div class="core-card">
+        <span class="ring mini" id="sbRing"></span>
+        <div class="txt"><b id="coreLabel">Verificando</b><small id="sbModel">núcleo</small></div>
+        <button class="logout" id="logout" aria-label="Sair" data-tip="Sair">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg>
+        </button>
+      </div>
     </div>
   </aside>
 
@@ -87,6 +157,8 @@
       <header class="topbar">
         <div class="crumbs mono"><span>ARES</span><i>//</i><span id="crumbMode">ESTRATEGISTA</span><i>//</i><span id="crumbClock">--:--</span></div>
         <div class="top-actions">
+          <button class="chip ghost" data-action="panel" aria-label="Abrir painel tático">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="8"/><path d="M12 13l4-4"/></svg>Painel</button>
           <button class="chip ghost" data-action="new">Nova batalha</button>
         </div>
       </header>
@@ -97,7 +169,7 @@
             <svg class="logo-fill"><use href="#logo"/></svg>
             <span class="scan"></span>
           </div>
-          <h1 class="hero-title"><span class="masked" data-text="ARES">ARES</span></h1>
+          <h1 class="sr-only">Ares</h1>
           <p class="hero-sub split" id="heroSub">Estratégia, força e precisão. O que vamos conquistar hoje?</p>
           <div class="seeds" id="seeds"></div>
         </div>
@@ -162,9 +234,11 @@
     </section>
   </main>
 
-  <!-- ===== Painel tático espacial (ui-espacial-vidro) ===== -->
-  <aside class="rail" id="rail" aria-label="Painel tático">
+  <!-- ===== Painel tático espacial (ui-espacial-vidro): gaveta que abre sob demanda ===== -->
+  <div class="drawer-scrim" id="scrim" hidden></div>
+  <aside class="rail" id="rail" aria-label="Painel tático" aria-hidden="true" inert>
     <div class="spatial glass" id="spatial">
+      <div class="rail-head"><span class="mono">PAINEL TÁTICO</span><button class="x" id="railClose" aria-label="Fechar painel">×</button></div>
       <div class="w w-clock">
         <span class="mono wl">HORA LOCAL</span>
         <b id="clock">--:--</b>
@@ -175,8 +249,10 @@
         <span class="mono wl">FÚRIA <em>esforço do raciocínio</em></span>
         <div class="dial" id="furyDial" role="slider" tabindex="0" aria-label="Fúria" aria-valuemin="0" aria-valuemax="4">
           <svg viewBox="0 0 200 200">
+            <g class="ticks" id="furyTicks"></g>
             <path class="arc-bg" d="M38 156A80 80 0 1 1 162 156"/>
             <path class="arc-fg" id="furyArc" d="M38 156A80 80 0 1 1 162 156"/>
+            <circle class="knob-pulse" id="furyPulse" r="9" cx="38" cy="156"/>
             <circle class="knob" id="furyKnob" r="9" cx="38" cy="156"/>
           </svg>
           <div class="dial-val"><b id="furyVal">Alta</b><small id="furyHint">análise profunda</small></div>
@@ -188,8 +264,10 @@
         <span class="mono wl">BRILHO <em>intensidade do tema</em></span>
         <div class="dial" id="glowDial" role="slider" tabindex="0" aria-label="Brilho" aria-valuemin="0" aria-valuemax="100">
           <svg viewBox="0 0 200 200">
+            <g class="ticks" id="glowTicks"></g>
             <path class="arc-bg" d="M38 156A80 80 0 1 1 162 156"/>
             <path class="arc-fg" id="glowArc" d="M38 156A80 80 0 1 1 162 156"/>
+            <circle class="knob-pulse" id="glowPulse" r="9" cx="38" cy="156"/>
             <circle class="knob" id="glowKnob" r="9" cx="38" cy="156"/>
           </svg>
           <div class="dial-val"><b id="glowVal">70%</b><small>aura</small></div>

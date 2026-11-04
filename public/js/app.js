@@ -92,7 +92,14 @@
     busy: false,
     abort: null
   };
-  const saveConvos = () => store.set('convos', S.convos.slice(0, 200));
+  const saveConvos = () => { store.set('convos', S.convos.slice(0, 200)); renderSbRecent(); };
+  function renderSbRecent() {
+    const box = document.getElementById('sbRecent'); if (!box) return;
+    document.getElementById('histBadge').textContent = S.convos.length;
+    box.innerHTML = S.convos.slice(0, 6).map(c => `<button data-id="${c.id}" class="${c.id === S.current ? 'on' : ''}" title="${esc(c.title)}"><i></i><span>${esc(c.title)}</span></button>`).join('')
+      || '<p class="none">Nenhuma batalha ainda.</p>';
+    box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => openConvo(b.dataset.id)));
+  }
 
   /* ---------- tema e brilho ---------- */
   function setTheme(t) {
@@ -112,7 +119,7 @@
     el.addEventListener('mouseenter', () => moveTo(el));
     el.addEventListener('click', e => {
       e.preventDefault();
-      if (el.dataset.action === 'new') return newConvo();
+      if (el.dataset.action) return;
       go(el.dataset.view);
     });
   });
@@ -141,6 +148,24 @@
     if (view === 'arena') $('#input').focus({ preventScroll: true });
   }
   addEventListener('hashchange', () => go(location.hash.slice(1)));
+  let togglePanel = () => {};
+  addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey || !$('#login').hidden || !$('#modal').hidden) return;
+    if (e.target.closest('input,textarea,[contenteditable],[role=slider],.carousel')) return;
+    const k = e.key.toLowerCase(), views = ['arena', 'arsenal', 'comando', 'historico'];
+    if (['1', '2', '3', '4'].includes(k)) { go(views[+k - 1]); e.preventDefault(); }
+    else if (k === 'n') { newConvo(); e.preventDefault(); }
+    else if (k === 'p') { togglePanel(); e.preventDefault(); }
+  });
+
+  const tip = document.createElement('div'); tip.className = 'sbtip'; document.body.append(tip);
+  $$('[data-tip]', sb).forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      if (!S.collapsed) return; const r = el.getBoundingClientRect();
+      tip.textContent = el.dataset.tip; tip.style.left = r.right + 14 + 'px'; tip.style.top = r.top + r.height / 2 + 'px'; tip.classList.add('on');
+    });
+    el.addEventListener('mouseleave', () => tip.classList.remove('on'));
+  });
 
   /* ---------- modo ativo (player) ---------- */
   function setMode(i, { announce = true } = {}) {
@@ -148,7 +173,7 @@
     const m = MODES[S.mode];
     $('#pname').textContent = m.nome; $('#pdesc').textContent = m.desc;
     $('#pthumb').innerHTML = icon(m.id);
-    $('#crumbMode').textContent = m.nome.toUpperCase();
+    $('#crumbMode').textContent = m.nome.toUpperCase(); $('#brandMode').textContent = m.nome.toUpperCase();
     renderSeeds();
     if (announce) layoutCarousel();
   }
@@ -295,12 +320,12 @@
   function curConvo() { return S.convos.find(c => c.id === S.current); }
   function newConvo() {
     if (S.busy) stop();
-    S.current = null; thread.innerHTML = ''; hero.classList.remove('gone');
+    S.current = null; thread.innerHTML = ''; hero.classList.remove('gone'); renderSbRecent();
     FX.split($('#heroSub')); updateTokens(); go('arena');
   }
   function openConvo(id) {
     const c = S.convos.find(x => x.id === id); if (!c) return;
-    S.current = id; thread.innerHTML = ''; hero.classList.add('gone');
+    S.current = id; thread.innerHTML = ''; hero.classList.add('gone'); renderSbRecent();
     c.msgs.forEach(m => addMsg(m.role, m.content, { t: m.t, mode: m.mode, demo: m.demo }));
     updateTokens(); go('arena'); requestAnimationFrame(() => (scroll.scrollTop = scroll.scrollHeight));
   }
@@ -384,6 +409,7 @@
       method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
       body: JSON.stringify({ mode, effort: FURY[S.fury].id, messages: c.msgs.map(m => ({ role: m.role, content: m.content })) })
     });
+    if (res.status === 401) { showLogin(S.status, 'Sua sessão expirou. Entre de novo.'); throw new Error('Sessão expirada.'); }
     if (!res.ok || !res.body) throw new Error(`Falha no núcleo (${res.status}). ${await res.text().catch(() => '')}`);
     const reader = res.body.getReader(), dec = new TextDecoder();
     let buf = '', usage = null;
@@ -438,6 +464,7 @@ npm start
     const d = new Date();
     $('#clock').textContent = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     $('#crumbClock').textContent = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    $('#loginClock').textContent = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + ' · ' + d.toLocaleDateString('pt-BR');
     $('#date').textContent = d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   }
   clock(); setInterval(clock, 1000 * 15);
@@ -445,23 +472,48 @@ npm start
   const A0 = Math.atan2(56, -62) * 180 / Math.PI, SWEEP = 540 - 2 * A0; // início ≈138°, varredura ≈264°
   function dial(rootSel, arcSel, knobSel, value, onChange, steps) {
     const root = $(rootSel), svg = $('svg', root), arc = $(arcSel), knob = $(knobSel);
+    const pulse = $('.knob-pulse', svg), ticks = $('.ticks', svg);
     arc.setAttribute('pathLength', 100);
-    const set = v => {
-      arc.style.strokeDasharray = `${v} 100`;
-      const a = (A0 + SWEEP * v / 100) * Math.PI / 180;
-      knob.setAttribute('cx', 100 + 80 * Math.cos(a)); knob.setAttribute('cy', 100 + 80 * Math.sin(a));
+    // marcações em volta do arco
+    const nT = steps || 10;
+    for (let i = 0; i <= nT; i++) {
+      const a = (A0 + SWEEP * i / nT) * Math.PI / 180, r1 = 96, r2 = steps ? 104 : 100;
+      const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      l.setAttribute('x1', 100 + r1 * Math.cos(a)); l.setAttribute('y1', 100 + r1 * Math.sin(a));
+      l.setAttribute('x2', 100 + r2 * Math.cos(a)); l.setAttribute('y2', 100 + r2 * Math.sin(a));
+      l.dataset.v = i / nT * 100; ticks.append(l);
+    }
+    let shown = 0, raf = 0;
+    const draw = v => {
+      arc.style.strokeDasharray = `${Math.max(v, .01)} 100`;
+      const a = (A0 + SWEEP * v / 100) * Math.PI / 180, x = 100 + 80 * Math.cos(a), y = 100 + 80 * Math.sin(a);
+      knob.setAttribute('cx', x); knob.setAttribute('cy', y); pulse.setAttribute('cx', x); pulse.setAttribute('cy', y);
+      $$('line', ticks).forEach(l => l.classList.toggle('on', +l.dataset.v <= v + .01));
     };
-    const fromPointer = e => {
+    // anima do valor mostrado até o novo (easing suave)
+    const set = (v, ms = 520) => {
+      cancelAnimationFrame(raf);
+      if (reduce) { shown = v; return draw(v); }
+      const from = shown, t0 = performance.now();
+      root.classList.add('bump'); setTimeout(() => root.classList.remove('bump'), 260);
+      const step = t => {
+        const k = Math.min((t - t0) / ms, 1), e = 1 - Math.pow(1 - k, 3);
+        shown = from + (v - from) * e; draw(shown); if (k < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    };
+    const fromPointer = (e, ms) => {
       const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.getScreenCTM().inverse());
       let rel = (Math.atan2(p.y - 100, p.x - 100) * 180 / Math.PI - A0 + 720) % 360;
       if (rel > SWEEP) rel = rel > SWEEP + (360 - SWEEP) / 2 ? 0 : SWEEP;
       let v = rel / SWEEP * 100;
       if (steps) v = Math.round(v / (100 / steps)) * (100 / steps);
-      onChange(v); set(v);
+      if (v === value && ms !== 520) return;
+      value = v; onChange(v); set(v, ms);
     };
     let drag = false;
-    root.addEventListener('pointerdown', e => { drag = true; root.setPointerCapture(e.pointerId); fromPointer(e); });
-    root.addEventListener('pointermove', e => drag && fromPointer(e));
+    root.addEventListener('pointerdown', e => { drag = true; root.setPointerCapture(e.pointerId); fromPointer(e, 520); });
+    root.addEventListener('pointermove', e => drag && fromPointer(e, steps ? 300 : 90));
     root.addEventListener('pointerup', () => (drag = false));
     root.addEventListener('keydown', e => {
       const d = steps ? 100 / steps : 5;
@@ -469,28 +521,45 @@ npm start
       else if (['ArrowLeft', 'ArrowDown'].includes(e.key)) value = Math.max(0, value - d); else return;
       e.preventDefault(); onChange(value); set(value);
     });
-    set(value);
-    return v => { value = v; set(v); };
+    draw(0);
+    return { set: v => { value = v; set(v); }, intro: () => { shown = 0; draw(0); set(value, 1100); } };
   }
   function applyFury(i) {
     S.fury = i; store.set('fury', i);
     $('#furyVal').textContent = FURY[i].nome; $('#furyHint').textContent = FURY[i].hint;
     $('#furyDial').setAttribute('aria-valuenow', i); $('#furyDial').setAttribute('aria-valuetext', FURY[i].nome);
   }
-  const setFuryDial = dial('#furyDial', '#furyArc', '#furyKnob', S.fury * 25, v => applyFury(Math.round(v / 25)), 4);
-  $$('[data-fury]').forEach(b => b.addEventListener('click', () => { const n = Math.max(0, Math.min(4, S.fury + +b.dataset.fury)); applyFury(n); setFuryDial(n * 25); }));
+  const furyDial = dial('#furyDial', '#furyArc', '#furyKnob', S.fury * 25, v => applyFury(Math.round(v / 25)), 4);
+  $$('[data-fury]').forEach(b => b.addEventListener('click', () => { const n = Math.max(0, Math.min(4, S.fury + +b.dataset.fury)); applyFury(n); furyDial.set(n * 25); }));
   applyFury(S.fury);
   function applyGlow(v) {
     S.glow = Math.round(v); store.set('glow', S.glow);
     document.documentElement.style.setProperty('--glow', (.15 + S.glow / 100 * 1.1).toFixed(3));
     $('#glowVal').textContent = S.glow + '%'; $('#glowDial').setAttribute('aria-valuenow', S.glow);
   }
-  dial('#glowDial', '#glowArc', '#glowKnob', S.glow, applyGlow);
+  const glowDial = dial('#glowDial', '#glowArc', '#glowKnob', S.glow, applyGlow);
   applyGlow(S.glow);
 
   FX.tilt($('#spatial'), 4, $('#rail'));
+  const rail = $('#rail'), scrim = $('#scrim');
+  function openPanel() {
+    rail.removeAttribute('inert'); rail.setAttribute('aria-hidden', 'false'); scrim.hidden = false;
+    requestAnimationFrame(() => { rail.classList.add('open'); scrim.classList.add('on'); });
+    setTimeout(() => { furyDial.intro(); glowDial.intro(); }, 200);
+    $('#railClose').focus({ preventScroll: true });
+  }
+  function closePanel() {
+    if (!rail.classList.contains('open')) return;
+    rail.classList.remove('open'); scrim.classList.remove('on');
+    rail.setAttribute('inert', ''); rail.setAttribute('aria-hidden', 'true');
+    setTimeout(() => (scrim.hidden = true), 450);
+  }
+  togglePanel = () => (rail.classList.contains('open') ? closePanel() : openPanel());
+  $$('[data-action="panel"]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); togglePanel(); }));
+  $('#railClose').addEventListener('click', closePanel); scrim.addEventListener('click', closePanel);
+  addEventListener('keydown', e => { if (e.key === 'Escape') closePanel(); });
   FX.tilt($('#heroLogo'), 14, $('#hero'));
-  FX.magnet(sendBtn); FX.magnet($('#modalGo'));
+  FX.magnet($('#modalGo'));
 
   function updateTokens() {
     const c = curConvo(), u = c ? c.usage : { in: 0, out: 0 };
@@ -505,8 +574,12 @@ npm start
     dot.className = 'status-dot ' + (S.online ? 'on' : 'demo'); ring.className = 'ring ' + (S.online ? 'on' : 'demo');
     $('#coreState').textContent = S.online ? 'Online' : 'Demonstração';
     $('#coreModel').textContent = S.online ? S.model : (st ? 'sem chave da API' : 'sem servidor');
-    $('#coreLabel').textContent = S.online ? 'NÚCLEO · ONLINE' : 'NÚCLEO · DEMO';
+    $('#coreLabel').textContent = S.online ? 'Núcleo online' : 'Modo demonstração';
+    $('#sbModel').textContent = S.online ? S.model : (st ? 'sem chave da API' : 'sem servidor');
+    $('#sbRing').className = 'ring mini ' + (S.online ? 'on' : 'demo');
     $('#fine').textContent = S.online ? 'ENTER envia · SHIFT+ENTER quebra linha' : 'MODO DEMO · rode npm start com a chave no .env para ligar o núcleo';
+    S.status = st;
+    return st;
   }
 
   /* ---------- relatório (dashboard) ---------- */
@@ -604,12 +677,68 @@ npm start
     }));
   }
 
+  /* ---------- login ---------- */
+  const login = $('#login'), app = $('#app'), lform = $('#loginForm');
+  function setUser(name) {
+    S.user = name; store.set('user', name);
+    $('#userName').textContent = name; $('#avatar').textContent = (name.trim()[0] || '?').toUpperCase();
+  }
+  function showLogin(st, err = '') {
+    app.classList.add('locked'); app.setAttribute('inert', '');
+    login.hidden = false; login.classList.remove('leaving');
+    FX.split($('#loginTitle'), 250);
+    const need = !!st?.auth?.required;
+    $('#passField').hidden = !need;
+    $('#loginStatus').textContent = !st ? 'SEM SERVIDOR · MODO DEMONSTRAÇÃO' : st.online ? 'NÚCLEO ONLINE · ' + String(st.model).toUpperCase() : 'SERVIDOR SEM CHAVE · DEMONSTRAÇÃO';
+    $('#loginNote').textContent = need ? '' : 'Sem senha configurada: seu codinome fica salvo só neste navegador.';
+    $('#loginErr').textContent = err;
+    $('#loginName').value = S.user || '';
+    setTimeout(() => ($('#loginName').value ? (need ? $('#loginPass') : $('#loginGo')) : $('#loginName')).focus(), 450);
+  }
+  function enterApp(animate = true) {
+    app.removeAttribute('inert'); app.classList.remove('locked');
+    if (animate) { login.classList.add('leaving'); setTimeout(() => { login.hidden = true; login.classList.remove('leaving'); }, 800); }
+    else login.hidden = true;
+    FX.split($('#heroSub'), animate ? 700 : 300);
+    go(location.hash.slice(1) || 'arena'); moveTo(activeItem);
+  }
+  lform.addEventListener('submit', async e => {
+    e.preventDefault();
+    const name = $('#loginName').value.trim(), pass = $('#loginPass').value, need = !$('#passField').hidden;
+    const fail = msg => { $('#loginErr').textContent = msg; lform.classList.remove('shake'); void lform.offsetWidth; lform.classList.add('shake'); };
+    if (!name) return fail('Diga seu codinome, comandante.');
+    if (need) {
+      if (!pass) return fail('Digite a senha de acesso.');
+      const btn = $('#loginGo'); btn.disabled = true;
+      try {
+        const r = await fetch('api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senha: pass }) });
+        if (!r.ok) { btn.disabled = false; return fail(r.status === 429 ? 'Muitas tentativas. Espere um minuto.' : 'Senha incorreta.'); }
+      } catch { btn.disabled = false; return fail('Não consegui falar com o servidor.'); }
+      btn.disabled = false; $('#loginPass').value = '';
+    }
+    $('#loginErr').textContent = '';
+    setUser(name); enterApp(true);
+  });
+  $('#eye').addEventListener('click', () => {
+    const i = $('#loginPass'), show = i.type === 'password';
+    i.type = show ? 'text' : 'password'; $('#eye').setAttribute('aria-label', show ? 'Esconder senha' : 'Mostrar senha');
+  });
+  $('#logout').addEventListener('click', async () => {
+    try { await fetch('api/logout', { method: 'POST' }); } catch {}
+    store.set('user', null); S.user = null; closePanel(); showLogin(await checkCore());
+  });
+  FX.tilt(lform, 5);
+  FX.tilt($('#loginLogo'), 14, login);
+
   /* ---------- início ---------- */
   setMode(S.mode, { announce: false });
   cIdx = S.mode; layoutCarousel();
   $$('[data-action="new"]').forEach(b => b.tagName === 'BUTTON' && b.addEventListener('click', newConvo));
-  FX.split($('#heroSub'), 500);
-  checkCore();
-  go(location.hash.slice(1) || 'arena');
-  moveTo(activeItem);
+  renderSbRecent();
+  S.user = store.get('user', null);
+  if (S.user) setUser(S.user);
+  checkCore().then(st => {
+    if (!S.user || (st?.auth?.required && !st.auth.ok)) showLogin(st);
+    else enterApp(false);
+  });
 })();
