@@ -833,6 +833,27 @@ html.intro-on :is(.login,.app,.bg) *,html.intro-on :is(.login,.app){animation-pl
   .i-word small{letter-spacing:.22em;font-size:9.5px}
 }
 
+/* ---------- Atalhos: arsenal rápido (segurar Q), aviso e lista ---------- */
+.sidebar{transition:width .55s var(--ease),opacity .4s var(--ease),transform .5s var(--ease)}
+.app{transition:opacity .9s var(--ease),transform 1s var(--ease),filter .9s var(--ease),grid-template-columns .5s var(--ease),gap .5s var(--ease)}
+.app.quick{grid-template-columns:0px 1fr;gap:0}
+.app.quick .sidebar{opacity:0;transform:translateX(-60px);pointer-events:none}
+.app.quick #view-arsenal .view-head{opacity:.55}
+.quick-hint{display:none;justify-content:center;align-items:center;gap:8px;font-size:11px;letter-spacing:.14em;color:var(--ink-2);padding-bottom:6px}
+.quick-hint span{color:var(--ink-3)}
+.app.quick .quick-hint{display:flex;animation:fadeIn .4s ease-out both}
+.app.quick .cnav{display:none}
+.quick-hint kbd,.keys kbd,.hint kbd{opacity:1;margin:0;display:inline-grid;color:var(--ink)}
+.toast{position:fixed;left:50%;top:22px;z-index:120;translate:-50% -20px;opacity:0;pointer-events:none;
+  padding:10px 18px;border-radius:999px;font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--ink);
+  background:rgba(10,10,12,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid rgba(var(--accent-rgb),.5);box-shadow:0 0 30px rgba(var(--accent-rgb),.25);
+  transition:opacity .3s var(--ease),translate .45s var(--ease)}
+.toast.on{opacity:1;translate:-50% 0}
+.keys{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px 24px;margin-top:14px}
+.keys li{display:flex;align-items:center;gap:12px;font-size:13.5px;color:var(--ink-2)}
+.keys li span{display:inline-flex;align-items:center;gap:4px;min-width:96px;font-size:11px;color:var(--ink-3)}
+
 </style>
 <script>
   // aplica tema salvo e decide a animação de entrada antes do primeiro quadro (evita piscar)
@@ -1056,6 +1077,7 @@ html.intro-on :is(.login,.app,.bg) *,html.intro-on :is(.login,.app){animation-pl
         <h2 class="split">Escolha como a Ares vai lutar.</h2>
       </header>
       <div class="carousel" id="carousel" role="listbox" aria-label="Modos da Ares" tabindex="0"></div>
+      <p class="quick-hint mono" aria-hidden="true"><kbd>←</kbd><kbd>→</kbd> escolher <span>·</span> solte <kbd>Q</kbd> para ativar <span>·</span> <kbd>Esc</kbd> cancela</p>
       <div class="cnav">
         <button class="pbtn" data-c-step="-1" aria-label="Anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
         <div class="cdots" id="cdots"></div>
@@ -1094,6 +1116,16 @@ html.intro-on :is(.login,.app,.bg) *,html.intro-on :is(.login,.app){animation-pl
               <div class="seg" id="fontSeg" role="radiogroup" aria-label="Tamanho do texto">
                 <button role="radio" data-font="p">Compacto</button><button role="radio" data-font="m">Padrão</button><button role="radio" data-font="g">Grande</button>
               </div>
+            </section>
+            <section class="set-card wide">
+              <h3>Atalhos de teclado</h3><p class="hint">Não funcionam enquanto você digita. Na Arena, <kbd>Esc</kbd> sai da caixa de mensagem.</p>
+              <ul class="keys">
+                <li><span><kbd>Q</kbd> segurar</span>Arsenal rápido: setas escolhem, soltar ativa</li>
+                <li><span><kbd>Shift</kbd>+<kbd>C</kbd></span>Nova conversa</li>
+                <li><span><kbd>P</kbd></span>Painel tático</li>
+                <li><span><kbd>1</kbd>…<kbd>5</kbd></span>Tema: branco, ciano, vermelho, rosa, verde</li>
+                <li><span><kbd>/</kbd></span>Ir para a caixa de mensagem</li>
+              </ul>
             </section>
             <section class="set-card">
               <h3>Efeitos</h3><p class="hint">Desligue o que achar demais.</p>
@@ -1769,7 +1801,6 @@ window.ARES_LOGO_PATH = "M 316.393 12.250 C 316.752 16.788, 317.485 25.450, 318.
     if (view === 'arsenal') { layoutCarousel(); $('#carousel').focus({ preventScroll: true }); }
     if (view === 'comando') { renderDash(); setTab(S.tab || 'relatorio', false); }
     if (view === 'historico') renderHistory();
-    if (view === 'arena') $('#input').focus({ preventScroll: true });
   }
   addEventListener('hashchange', () => go(location.hash.slice(1)));
 
@@ -1787,14 +1818,58 @@ window.ARES_LOGO_PATH = "M 316.393 12.250 C 316.752 16.788, 317.485 25.450, 318.
   addEventListener('resize', () => S.tab && $('#view-comando').classList.contains('active') && setTab(S.tab, false));
   const openProfile = () => { S.tab = 'perfil'; go('comando'); };
   let togglePanel = () => {};
+
+  /* ---------- atalhos de teclado ----------
+     Q (segurar)  arsenal rápido: setas escolhem, soltar Q ativa, Esc cancela
+     Shift+C      nova conversa
+     P            painel tático
+     1 a 5        tema: preto e branco, ciano, vermelho, rosa, verde
+     Nenhum atalho funciona enquanto a pessoa digita num campo. */
+  const typing = e => e.isComposing || !!e.target.closest?.('input,textarea,select,[contenteditable=""],[contenteditable="true"]');
+  const currentView = () => ($('.view.active')?.id || 'view-arena').replace('view-', '');
+  const toastEl = document.createElement('div'); toastEl.className = 'toast'; toastEl.setAttribute('role', 'status'); document.body.append(toastEl);
+  let toastT = 0;
+  function toast(msg) {
+    toastEl.textContent = msg; toastEl.classList.add('on');
+    clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('on'), 1600);
+  }
+  let quick = null;
+  function quickOpen() {
+    if (quick) return;
+    quick = { prev: currentView() };
+    closePanel(); tip.classList.remove('on');
+    $('#app').classList.add('quick');
+    cIdx = S.mode; go('arsenal');
+  }
+  function quickClose(activate) {
+    if (!quick) return;
+    const prev = quick.prev === 'arsenal' ? 'arena' : quick.prev; quick = null;
+    $('#app').classList.remove('quick');
+    if (activate) { setMode(cIdx); toast(`MODO ${MODES[S.mode].nome.toUpperCase()} ATIVADO`); }
+    go(prev);
+  }
   addEventListener('keydown', e => {
-    if (e.ctrlKey || e.metaKey || e.altKey || !$('#login').hidden || !$('#modal').hidden) return;
-    if (e.target.closest('input,textarea,[contenteditable],[role=slider],.carousel')) return;
-    const k = e.key.toLowerCase(), views = ['arena', 'arsenal', 'comando', 'historico'];
-    if (['1', '2', '3', '4'].includes(k)) { go(views[+k - 1]); e.preventDefault(); }
-    else if (k === 'n') { newConvo(); e.preventDefault(); }
-    else if (k === 'p') { togglePanel(); e.preventDefault(); }
+    if (!$('#login').hidden || !$('#modal').hidden || document.documentElement.classList.contains('intro-on')) return;
+    // Esc dentro da caixa de mensagem: sai da caixa para os atalhos voltarem a funcionar
+    if (e.key === 'Escape' && e.target.id === 'input') { e.target.blur(); return; }
+    if (typing(e) || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (quick) {
+      if (e.key === 'Escape') { e.preventDefault(); quickClose(false); }
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { if (!e.target.closest('.carousel')) cStep(e.key === 'ArrowRight' ? 1 : -1); e.preventDefault(); }
+      else if (e.code !== 'KeyQ') e.preventDefault();
+      return;
+    }
+    const digit = /^Digit([1-5])$/.exec(e.code);
+    if (e.code === 'KeyQ' && !e.shiftKey) { e.preventDefault(); if (!e.repeat) quickOpen(); }
+    else if (e.code === 'KeyC' && e.shiftKey) { e.preventDefault(); newConvo(); toast('NOVA CONVERSA'); }
+    else if (e.code === 'KeyP' && !e.shiftKey) { e.preventDefault(); togglePanel(); }
+    else if (digit && !e.shiftKey) { e.preventDefault(); const t = THEMES[+digit[1] - 1]; setTheme(t.id); toast(`TEMA ${t.nome.toUpperCase()}`); }
+    else if (e.key === '/' && currentView() === 'arena') { e.preventDefault(); $('#input').focus(); }
+    // qualquer outra letra na Arena começa a digitar direto na caixa de mensagem
+    else if (currentView() === 'arena' && e.key.length === 1 && !e.target.closest('button,a,[role=slider]')) $('#input').focus();
   });
+  addEventListener('keyup', e => { if (e.code === 'KeyQ' && quick) quickClose(true); });
+  addEventListener('blur', () => quickClose(false));
 
   const tip = document.createElement('div'); tip.className = 'sbtip'; document.body.append(tip);
   $$('[data-tip]', sb).forEach(el => {

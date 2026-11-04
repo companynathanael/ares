@@ -45,7 +45,16 @@ Tudo segue um único padrão: retângulos de cantos arredondados (tokens `--r-xs
 
 ## Atalhos
 
-`1` Arena · `2` Arsenal · `3` Comando · `4` Histórico · `N` nova batalha · `P` painel tático · `Esc` fecha
+| Tecla | Ação |
+|---|---|
+| `Q` (segurar) | Arsenal rápido sem a sidebar: setas escolhem o modo, soltar `Q` ativa, `Esc` cancela |
+| `Shift` + `C` | Nova conversa |
+| `P` | Painel tático |
+| `1` `2` `3` `4` `5` | Tema preto e branco, ciano, vermelho, rosa, verde |
+| `/` | Ir para a caixa de mensagem |
+| `Esc` | Sai da caixa de mensagem / fecha painel e janelas |
+
+Nenhum atalho funciona enquanto se digita num campo. Na Arena, começar a digitar qualquer outra letra já leva para a caixa de mensagem.
 
 ## Temas
 

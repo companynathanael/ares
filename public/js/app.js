@@ -154,7 +154,6 @@
     if (view === 'arsenal') { layoutCarousel(); $('#carousel').focus({ preventScroll: true }); }
     if (view === 'comando') { renderDash(); setTab(S.tab || 'relatorio', false); }
     if (view === 'historico') renderHistory();
-    if (view === 'arena') $('#input').focus({ preventScroll: true });
   }
   addEventListener('hashchange', () => go(location.hash.slice(1)));
 
@@ -172,14 +171,58 @@
   addEventListener('resize', () => S.tab && $('#view-comando').classList.contains('active') && setTab(S.tab, false));
   const openProfile = () => { S.tab = 'perfil'; go('comando'); };
   let togglePanel = () => {};
+
+  /* ---------- atalhos de teclado ----------
+     Q (segurar)  arsenal rápido: setas escolhem, soltar Q ativa, Esc cancela
+     Shift+C      nova conversa
+     P            painel tático
+     1 a 5        tema: preto e branco, ciano, vermelho, rosa, verde
+     Nenhum atalho funciona enquanto a pessoa digita num campo. */
+  const typing = e => e.isComposing || !!e.target.closest?.('input,textarea,select,[contenteditable=""],[contenteditable="true"]');
+  const currentView = () => ($('.view.active')?.id || 'view-arena').replace('view-', '');
+  const toastEl = document.createElement('div'); toastEl.className = 'toast'; toastEl.setAttribute('role', 'status'); document.body.append(toastEl);
+  let toastT = 0;
+  function toast(msg) {
+    toastEl.textContent = msg; toastEl.classList.add('on');
+    clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('on'), 1600);
+  }
+  let quick = null;
+  function quickOpen() {
+    if (quick) return;
+    quick = { prev: currentView() };
+    closePanel(); tip.classList.remove('on');
+    $('#app').classList.add('quick');
+    cIdx = S.mode; go('arsenal');
+  }
+  function quickClose(activate) {
+    if (!quick) return;
+    const prev = quick.prev === 'arsenal' ? 'arena' : quick.prev; quick = null;
+    $('#app').classList.remove('quick');
+    if (activate) { setMode(cIdx); toast(`MODO ${MODES[S.mode].nome.toUpperCase()} ATIVADO`); }
+    go(prev);
+  }
   addEventListener('keydown', e => {
-    if (e.ctrlKey || e.metaKey || e.altKey || !$('#login').hidden || !$('#modal').hidden) return;
-    if (e.target.closest('input,textarea,[contenteditable],[role=slider],.carousel')) return;
-    const k = e.key.toLowerCase(), views = ['arena', 'arsenal', 'comando', 'historico'];
-    if (['1', '2', '3', '4'].includes(k)) { go(views[+k - 1]); e.preventDefault(); }
-    else if (k === 'n') { newConvo(); e.preventDefault(); }
-    else if (k === 'p') { togglePanel(); e.preventDefault(); }
+    if (!$('#login').hidden || !$('#modal').hidden || document.documentElement.classList.contains('intro-on')) return;
+    // Esc dentro da caixa de mensagem: sai da caixa para os atalhos voltarem a funcionar
+    if (e.key === 'Escape' && e.target.id === 'input') { e.target.blur(); return; }
+    if (typing(e) || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (quick) {
+      if (e.key === 'Escape') { e.preventDefault(); quickClose(false); }
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { if (!e.target.closest('.carousel')) cStep(e.key === 'ArrowRight' ? 1 : -1); e.preventDefault(); }
+      else if (e.code !== 'KeyQ') e.preventDefault();
+      return;
+    }
+    const digit = /^Digit([1-5])$/.exec(e.code);
+    if (e.code === 'KeyQ' && !e.shiftKey) { e.preventDefault(); if (!e.repeat) quickOpen(); }
+    else if (e.code === 'KeyC' && e.shiftKey) { e.preventDefault(); newConvo(); toast('NOVA CONVERSA'); }
+    else if (e.code === 'KeyP' && !e.shiftKey) { e.preventDefault(); togglePanel(); }
+    else if (digit && !e.shiftKey) { e.preventDefault(); const t = THEMES[+digit[1] - 1]; setTheme(t.id); toast(`TEMA ${t.nome.toUpperCase()}`); }
+    else if (e.key === '/' && currentView() === 'arena') { e.preventDefault(); $('#input').focus(); }
+    // qualquer outra letra na Arena começa a digitar direto na caixa de mensagem
+    else if (currentView() === 'arena' && e.key.length === 1 && !e.target.closest('button,a,[role=slider]')) $('#input').focus();
   });
+  addEventListener('keyup', e => { if (e.code === 'KeyQ' && quick) quickClose(true); });
+  addEventListener('blur', () => quickClose(false));
 
   const tip = document.createElement('div'); tip.className = 'sbtip'; document.body.append(tip);
   $$('[data-tip]', sb).forEach(el => {
