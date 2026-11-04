@@ -48,7 +48,7 @@ Tudo segue um único padrão: retângulos de cantos arredondados (tokens `--r-xs
 | Tecla | Ação |
 |---|---|
 | `Q` (segurar) | Arsenal rápido sem a sidebar: setas escolhem o modo, soltar `Q` ativa, `Esc` cancela |
-| `Shift` + `C` | Nova conversa |
+| `Shift` (toque rápido) | Nova conversa |
 | `P` | Painel tático |
 | `1` `2` `3` `4` `5` | Tema preto e branco, ciano, vermelho, rosa, verde |
 | `/` | Ir para a caixa de mensagem |

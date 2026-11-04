@@ -174,7 +174,7 @@
 
   /* ---------- atalhos de teclado ----------
      Q (segurar)  arsenal rápido: setas escolhem, soltar Q ativa, Esc cancela
-     Shift+C      nova conversa
+     Shift        nova conversa (toque rápido e sozinho, sem outra tecla junto)
      P            painel tático
      1 a 5        tema: preto e branco, ciano, vermelho, rosa, verde
      Nenhum atalho funciona enquanto a pessoa digita num campo. */
@@ -214,14 +214,30 @@
     }
     const digit = /^Digit([1-5])$/.exec(e.code);
     if (e.code === 'KeyQ' && !e.shiftKey) { e.preventDefault(); if (!e.repeat) quickOpen(); }
-    else if (e.code === 'KeyC' && e.shiftKey) { e.preventDefault(); newConvo(); toast('NOVA CONVERSA'); }
     else if (e.code === 'KeyP' && !e.shiftKey) { e.preventDefault(); togglePanel(); }
     else if (digit && !e.shiftKey) { e.preventDefault(); const t = THEMES[+digit[1] - 1]; setTheme(t.id); toast(`TEMA ${t.nome.toUpperCase()}`); }
     else if (e.key === '/' && currentView() === 'arena') { e.preventDefault(); $('#input').focus(); }
     // qualquer outra letra na Arena começa a digitar direto na caixa de mensagem
     else if (currentView() === 'arena' && e.key.length === 1 && !e.target.closest('button,a,[role=slider]')) $('#input').focus();
   });
-  addEventListener('keyup', e => { if (e.code === 'KeyQ' && quick) quickClose(true); });
+  // Shift sozinho = nova conversa. Só vale um toque rápido, sem nenhuma outra tecla ou clique junto,
+  // para não disparar quando o Shift é usado para maiúsculas ou combinações.
+  let shiftTap = null;
+  addEventListener('keydown', e => {
+    if (e.key === 'Shift' && !e.repeat) {
+      const ok = $('#login').hidden && $('#modal').hidden && !quick && !typing(e) && !e.ctrlKey && !e.metaKey && !e.altKey
+        && !document.documentElement.classList.contains('intro-on');
+      shiftTap = ok ? performance.now() : null;
+    } else if (e.key !== 'Shift') shiftTap = null;
+  }, true);
+  addEventListener('pointerdown', () => (shiftTap = null), true);
+  addEventListener('keyup', e => {
+    if (e.code === 'KeyQ' && quick) quickClose(true);
+    if (e.key === 'Shift' && shiftTap != null) {
+      const quickTap = performance.now() - shiftTap < 450; shiftTap = null;
+      if (quickTap && !typing(e)) { newConvo(); toast('NOVA CONVERSA'); }
+    }
+  });
   addEventListener('blur', () => quickClose(false));
 
   const tip = document.createElement('div'); tip.className = 'sbtip'; document.body.append(tip);
