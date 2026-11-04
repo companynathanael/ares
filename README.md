@@ -24,19 +24,31 @@ A Ares abre numa tela de login. Sem senha configurada, ela pede só o **codinome
 Com `ARES_SENHA=...` no `.env`, a tela pede também a senha e o servidor só responde a quem entrou
 (sessão em cookie HttpOnly de 7 dias e no máximo 5 tentativas por minuto). O botão de sair fica no rodapé do menu.
 
+## Comando (engrenagem)
+
+- **Relatório:** números e gráficos das suas conversas.
+- **Aparência:** tema, brilho, tamanho do texto e liga/desliga de cada efeito (estrelas, grade hexagonal, aurora, cursor, animações).
+- **Perfil:** foto, codinome, título, como a Ares deve te chamar e um "sobre você" que a Ares usa como contexto nas respostas. Clicar no seu nome no rodapé do menu também abre o perfil.
+
+## Forma
+
+Tudo segue um único padrão: retângulos de cantos arredondados (tokens `--r-xs` a `--r-xl` em `ares.css`), botões em pílula e cursor em anel.
+
 ## Atalhos
 
 `1` Arena · `2` Arsenal · `3` Comando · `4` Histórico · `N` nova batalha · `P` painel tático · `Esc` fecha
 
 ## Temas
 
-Os três pontos no topo do menu trocam o tema (fica salvo no navegador):
+O tema se troca em **Comando → Aparência** ou nos pontos da tela de login (fica salvo no navegador):
 
 | Ponto | Tema |
 |---|---|
 | ◐ | Preto e branco puro |
 | ● ciano | Preto e branco com detalhes em ciano |
 | ● vermelho | Preto e branco com detalhes em vermelho |
+| ● rosa | Preto e branco com detalhes em rosa |
+| ● verde | Preto e branco com detalhes em verde |
 
 Fonte: **Chakra Petch** (sans-serif angular, combina com os chanfros da logo) e **JetBrains Mono** nos rótulos.
 

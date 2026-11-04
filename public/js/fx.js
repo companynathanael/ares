@@ -89,10 +89,10 @@
   if (fine && cur) {
     (function loop() {
       cx += (mouse.x - cx) * .22; cy += (mouse.y - cy) * .22;
-      cur.style.transform = `translate3d(${cx}px,${cy}px,0) rotate(45deg)`;
+      cur.style.transform = `translate3d(${cx}px,${cy}px,0)`;
       requestAnimationFrame(loop);
     })();
-    document.addEventListener('pointerover', e => cur.classList.toggle('big', !!e.target.closest('a,button,[role=slider],.card')));
+    document.addEventListener('pointerover', e => cur.classList.toggle('big', !!e.target.closest('a,button,label,[role=slider],.card')));
   }
 
   /* ---------- Split / blur text ---------- */

@@ -95,20 +95,29 @@
   const saveConvos = () => { store.set('convos', S.convos.slice(0, 200)); renderSbRecent(); };
   function renderSbRecent() {
     const box = document.getElementById('sbRecent'); if (!box) return;
-    document.getElementById('histBadge').textContent = S.convos.length;
     box.innerHTML = S.convos.slice(0, 6).map(c => `<button data-id="${c.id}" class="${c.id === S.current ? 'on' : ''}" title="${esc(c.title)}"><i></i><span>${esc(c.title)}</span></button>`).join('')
       || '<p class="none">Nenhuma batalha ainda.</p>';
     box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => openConvo(b.dataset.id)));
   }
 
   /* ---------- tema e brilho ---------- */
+  const THEMES = [
+    { id: 'mono', nome: 'Preto e branco', cor: '#ffffff' },
+    { id: 'ciano', nome: 'Ciano', cor: '#22e6ff' },
+    { id: 'vermelho', nome: 'Vermelho', cor: '#ff2b3d' },
+    { id: 'rosa', nome: 'Rosa', cor: '#ff4fb8' },
+    { id: 'verde', nome: 'Verde', cor: '#2bff88' }
+  ];
+  $('#themeGrid').innerHTML = THEMES.map(t => `<button class="theme-opt" role="radio" data-theme-set="${t.id}" style="--sw:${t.cor}">
+      <span class="pv"><i></i><b><span></span><span></span><span></span></b></span><em>${t.nome}</em></button>`).join('');
   function setTheme(t) {
+    if (!THEMES.some(x => x.id === t)) t = 'ciano';
     S.theme = t; store.set('theme', t);
     document.documentElement.dataset.theme = t;
-    $$('.tdot').forEach(b => b.setAttribute('aria-checked', b.dataset.themeSet === t));
+    $$('[data-theme-set]').forEach(b => b.setAttribute('aria-checked', b.dataset.themeSet === t));
     requestAnimationFrame(FX.readAccent);
   }
-  $$('.tdot').forEach(b => b.addEventListener('click', () => setTheme(b.dataset.themeSet)));
+  $$('[data-theme-set]').forEach(b => b.addEventListener('click', () => setTheme(b.dataset.themeSet)));
   setTheme(S.theme);
 
   /* ---------- sidebar: pílula que desliza + recolher ---------- */
@@ -143,11 +152,25 @@
     if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view);
     const v = $('#view-' + view); $$('.split', v).forEach(el => FX.split(el));
     if (view === 'arsenal') { layoutCarousel(); $('#carousel').focus({ preventScroll: true }); }
-    if (view === 'comando') renderDash();
+    if (view === 'comando') { renderDash(); setTab(S.tab || 'relatorio', false); }
     if (view === 'historico') renderHistory();
     if (view === 'arena') $('#input').focus({ preventScroll: true });
   }
   addEventListener('hashchange', () => go(location.hash.slice(1)));
+
+  const TAB_TITLES = { relatorio: 'Seu histórico com a Ares, em números.', aparencia: 'Deixe a Ares com a sua cara.', perfil: 'Quem está no comando.' };
+  function setTab(t, anim = true) {
+    S.tab = t;
+    $$('.tab').forEach(b => { const on = b.dataset.tab === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    $$('.pane').forEach(p => p.classList.toggle('on', p.dataset.pane === t));
+    const on = $(`.tab[data-tab="${t}"]`), pill = $('#tabPill');
+    pill.style.width = on.offsetWidth + 'px'; pill.style.transform = `translateX(${on.offsetLeft}px)`;
+    const h = $('#cmdTitle'); if (h.dataset.raw !== TAB_TITLES[t]) { h.dataset.raw = TAB_TITLES[t]; if (anim) FX.split(h); else h.textContent = TAB_TITLES[t]; }
+    if (t === 'perfil') fillProfile();
+  }
+  $$('.tab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+  addEventListener('resize', () => S.tab && $('#view-comando').classList.contains('active') && setTab(S.tab, false));
+  const openProfile = () => { S.tab = 'perfil'; go('comando'); };
   let togglePanel = () => {};
   addEventListener('keydown', e => {
     if (e.ctrlKey || e.metaKey || e.altKey || !$('#login').hidden || !$('#modal').hidden) return;
@@ -173,20 +196,13 @@
     const m = MODES[S.mode];
     $('#pname').textContent = m.nome; $('#pdesc').textContent = m.desc;
     $('#pthumb').innerHTML = icon(m.id);
-    $('#crumbMode').textContent = m.nome.toUpperCase(); $('#brandMode').textContent = m.nome.toUpperCase();
-    renderSeeds();
+    $('#crumbMode').textContent = m.nome.toUpperCase();
     if (announce) layoutCarousel();
   }
   $$('[data-mode-step]').forEach(b => b.addEventListener('click', () => setMode(S.mode + +b.dataset.modeStep)));
   $('#shuffle').addEventListener('click', () => { let n; do { n = Math.floor(Math.random() * MODES.length); } while (n === S.mode); setMode(n); });
   $('#pnow').addEventListener('click', () => go('arsenal'));
 
-  function renderSeeds() {
-    const m = MODES[S.mode], box = $('#seeds');
-    const all = [...m.seeds, ...MODES.filter(x => x !== m).slice(0, 2).map(x => x.seeds[0])];
-    box.innerHTML = all.map((s, i) => `<button class="seed" style="animation-delay:${400 + i * 90}ms" data-i="${i}"><small>${i < 2 ? m.nome.toUpperCase() : 'IDEIA'}</small>${esc(s)}</button>`).join('');
-    $$('.seed', box).forEach((b, i) => b.addEventListener('click', () => { $('#input').value = all[i]; send(); }));
-  }
 
   /* ---------- carrossel 3D de vidro ---------- */
   const car = $('#carousel'), dots = $('#cdots');
@@ -407,7 +423,7 @@
   async function streamApi(c, mode, onText, signal) {
     const res = await fetch('api/chat', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
-      body: JSON.stringify({ mode, effort: FURY[S.fury].id, messages: c.msgs.map(m => ({ role: m.role, content: m.content })) })
+      body: JSON.stringify({ mode, effort: FURY[S.fury].id, perfil: { nome: S.profile?.nome, chamar: S.profile?.chamar, sobre: S.profile?.sobre }, messages: c.msgs.map(m => ({ role: m.role, content: m.content })) })
     });
     if (res.status === 401) { showLogin(S.status, 'Sua sessão expirou. Entre de novo.'); throw new Error('Sessão expirada.'); }
     if (!res.ok || !res.body) throw new Error(`Falha no núcleo (${res.status}). ${await res.text().catch(() => '')}`);
@@ -439,7 +455,7 @@ Você pediu: *"${text.slice(0, 120)}${text.length > 120 ? '…' : ''}"*. Com o n
 ### Como ligar o núcleo
 1. Crie o arquivo \`.env\` na raiz do projeto com \`ANTHROPIC_API_KEY=sua-chave\`
 2. Rode \`npm install\` e depois \`npm start\`
-3. Abra \`http://localhost:3000\`, e o ponto ao lado do seu nome fica aceso
+3. Abra \`http://localhost:3000\`, e o status no rodapé do menu muda para *Núcleo online*
 
 \`\`\`bash
 npm install
@@ -536,8 +552,28 @@ npm start
     S.glow = Math.round(v); store.set('glow', S.glow);
     document.documentElement.style.setProperty('--glow', (.15 + S.glow / 100 * 1.1).toFixed(3));
     $('#glowVal').textContent = S.glow + '%'; $('#glowDial').setAttribute('aria-valuenow', S.glow);
+    const r = $('#glowRange'); r.value = S.glow; r.style.setProperty('--p', S.glow + '%'); $('#glowRangeVal').textContent = S.glow + '%';
   }
   const glowDial = dial('#glowDial', '#glowArc', '#glowKnob', S.glow, applyGlow);
+  $('#glowRange').addEventListener('input', e => { applyGlow(+e.target.value); glowDial.set(+e.target.value); });
+
+  /* ---------- aparência: efeitos e tamanho do texto ---------- */
+  const FXDEF = { stars: true, hex: true, aurora: true, cursor: true, calm: false };
+  S.fx = Object.assign({}, FXDEF, store.get('fx', {}));
+  function applyFx() {
+    const h = document.documentElement;
+    for (const k of ['stars', 'hex', 'aurora', 'cursor']) h.dataset['fx' + k[0].toUpperCase() + k.slice(1)] = S.fx[k] ? 'on' : 'off';
+    h.classList.toggle('calm', !!S.fx.calm);
+    $$('[data-fx]').forEach(i => (i.checked = !!S.fx[i.dataset.fx]));
+  }
+  $$('[data-fx]').forEach(i => i.addEventListener('change', () => { S.fx[i.dataset.fx] = i.checked; store.set('fx', S.fx); applyFx(); }));
+  applyFx();
+  function setFont(f) {
+    S.font = f; store.set('font', f); document.documentElement.dataset.size = f;
+    $$('[data-font]').forEach(b => b.setAttribute('aria-checked', b.dataset.font === f));
+  }
+  $$('[data-font]').forEach(b => b.addEventListener('click', () => setFont(b.dataset.font)));
+  setFont(store.get('font', 'm'));
   applyGlow(S.glow);
 
   FX.tilt($('#spatial'), 4, $('#rail'));
@@ -570,8 +606,7 @@ npm start
     let st = null;
     try { const r = await fetch('api/status', { cache: 'no-store' }); if (r.ok) st = await r.json(); } catch {}
     S.online = !!(st && st.online); S.model = st?.model || '';
-    const dot = $('#statusDot'), ring = $('#coreRing');
-    dot.className = 'status-dot ' + (S.online ? 'on' : 'demo'); ring.className = 'ring ' + (S.online ? 'on' : 'demo');
+    $('#coreRing').className = 'ring ' + (S.online ? 'on' : 'demo');
     $('#coreState').textContent = S.online ? 'Online' : 'Demonstração';
     $('#coreModel').textContent = S.online ? S.model : (st ? 'sem chave da API' : 'sem servidor');
     $('#coreLabel').textContent = S.online ? 'Núcleo online' : 'Modo demonstração';
@@ -679,10 +714,48 @@ npm start
 
   /* ---------- login ---------- */
   const login = $('#login'), app = $('#app'), lform = $('#loginForm');
-  function setUser(name) {
-    S.user = name; store.set('user', name);
-    $('#userName').textContent = name; $('#avatar').textContent = (name.trim()[0] || '?').toUpperCase();
+  // perfil salvo só neste navegador: { nome, titulo, chamar, sobre, avatar(dataURL) }
+  const avatarHTML = pf => pf.avatar ? `<img src="${pf.avatar}" alt="">` : esc((pf.nome || '?').trim()[0] || '?').toUpperCase();
+  function renderProfile() {
+    const pf = S.profile;
+    $('#userName').textContent = pf.nome || '—'; $('#userRole').textContent = pf.titulo || 'Comandante';
+    $('#avatar').innerHTML = avatarHTML(pf); $('#avatarBig').innerHTML = avatarHTML(pf);
   }
+  function setUser(name) {
+    S.profile = Object.assign({ titulo: 'Comandante', chamar: '', sobre: '', avatar: '' }, S.profile || {}, { nome: name });
+    S.user = name; store.set('profile', S.profile); renderProfile();
+  }
+  function fillProfile() {
+    const pf = S.profile || {};
+    $('#pfName').value = pf.nome || ''; $('#pfTitle').value = pf.titulo || ''; $('#pfCall').value = pf.chamar || '';
+    $('#pfAbout').value = pf.sobre || ''; $('#pfAboutCount').textContent = `${(pf.sobre || '').length}/300`;
+    $('#avatarBig').innerHTML = avatarHTML(pf);
+  }
+  $('#pfAbout').addEventListener('input', e => ($('#pfAboutCount').textContent = `${e.target.value.length}/300`));
+  $('#profileForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const nome = $('#pfName').value.trim(); if (!nome) return $('#pfName').focus();
+    S.profile = Object.assign({}, S.profile, { nome, titulo: $('#pfTitle').value.trim() || 'Comandante', chamar: $('#pfCall').value.trim(), sobre: $('#pfAbout').value.trim() });
+    S.user = nome; store.set('profile', S.profile); renderProfile();
+    const ok = $('#pfSaved'); ok.textContent = 'Perfil salvo ✓'; ok.classList.add('on'); setTimeout(() => ok.classList.remove('on'), 2200);
+  });
+  $('#avatarFile').addEventListener('change', e => {
+    const f = e.target.files[0]; if (!f) return;
+    const img = new Image(), url = URL.createObjectURL(f);
+    img.onload = () => {
+      const c = document.createElement('canvas'), n = 160, k = Math.max(n / img.width, n / img.height);
+      c.width = c.height = n; const x = c.getContext('2d');
+      x.drawImage(img, (n - img.width * k) / 2, (n - img.height * k) / 2, img.width * k, img.height * k);
+      S.profile.avatar = c.toDataURL('image/jpeg', .85); store.set('profile', S.profile); renderProfile(); URL.revokeObjectURL(url);
+    };
+    img.src = url; e.target.value = '';
+  });
+  $('#avatarRemove').addEventListener('click', () => { S.profile.avatar = ''; store.set('profile', S.profile); renderProfile(); });
+  $('#wipe').addEventListener('click', () => {
+    if (!confirm('Apagar todas as conversas deste navegador? Não dá para desfazer.')) return;
+    S.convos = []; saveConvos(); newConvo(); setTab('perfil', false); go('comando');
+  });
+  $('#userOpen').addEventListener('click', openProfile);
   function showLogin(st, err = '') {
     app.classList.add('locked'); app.setAttribute('inert', '');
     login.hidden = false; login.classList.remove('leaving');
@@ -717,7 +790,7 @@ npm start
       btn.disabled = false; $('#loginPass').value = '';
     }
     $('#loginErr').textContent = '';
-    setUser(name); enterApp(true);
+    setUser(name); store.set('logged', true); enterApp(true);
   });
   $('#eye').addEventListener('click', () => {
     const i = $('#loginPass'), show = i.type === 'password';
@@ -725,7 +798,7 @@ npm start
   });
   $('#logout').addEventListener('click', async () => {
     try { await fetch('api/logout', { method: 'POST' }); } catch {}
-    store.set('user', null); S.user = null; closePanel(); showLogin(await checkCore());
+    store.set('logged', false); closePanel(); showLogin(await checkCore());
   });
   FX.tilt(lform, 5);
   FX.tilt($('#loginLogo'), 14, login);
@@ -735,10 +808,12 @@ npm start
   cIdx = S.mode; layoutCarousel();
   $$('[data-action="new"]').forEach(b => b.tagName === 'BUTTON' && b.addEventListener('click', newConvo));
   renderSbRecent();
-  S.user = store.get('user', null);
-  if (S.user) setUser(S.user);
+  S.profile = store.get('profile', null);
+  if (!S.profile && store.get('user', null)) setUser(store.get('user', null));
+  S.user = S.profile?.nome || null;
+  if (S.profile) renderProfile();
   checkCore().then(st => {
-    if (!S.user || (st?.auth?.required && !st.auth.ok)) showLogin(st);
+    if (!S.user || !store.get('logged', true) || (st?.auth?.required && !st.auth.ok)) showLogin(st);
     else enterApp(false);
   });
 })();

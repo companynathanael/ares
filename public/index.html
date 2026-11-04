@@ -48,12 +48,11 @@
     <ul class="login-feats mono">
       <li><b>06</b> modos de batalha</li>
       <li><b>05</b> níveis de fúria</li>
-      <li><b>03</b> temas</li>
+      <li><b>05</b> temas</li>
     </ul>
   </div>
 
   <form class="login-card" id="loginForm" autocomplete="on" novalidate>
-    <span class="corner tl"></span><span class="corner br"></span>
     <div class="lc-head">
       <svg class="lc-logo"><use href="#logo"/></svg>
       <div><b>Acesso ao núcleo</b><small class="mono" id="loginStatus">VERIFICANDO NÚCLEO…</small></div>
@@ -62,7 +61,6 @@
     <label class="field">
       <span class="mono">CODINOME</span>
       <input id="loginName" name="username" autocomplete="username" maxlength="32" placeholder="Como a Ares deve te chamar" required>
-      <i class="field-line"></i>
     </label>
     <label class="field" id="passField">
       <span class="mono">SENHA DE ACESSO</span>
@@ -70,7 +68,6 @@
       <button type="button" class="eye" id="eye" aria-label="Mostrar senha">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/></svg>
       </button>
-      <i class="field-line"></i>
     </label>
     <p class="login-note" id="loginNote"></p>
     <p class="login-err" id="loginErr" role="alert"></p>
@@ -85,6 +82,8 @@
         <button type="button" class="tdot" data-theme-set="mono" role="radio" aria-label="Tema preto e branco"></button>
         <button type="button" class="tdot" data-theme-set="ciano" role="radio" aria-label="Tema ciano"></button>
         <button type="button" class="tdot" data-theme-set="vermelho" role="radio" aria-label="Tema vermelho"></button>
+        <button type="button" class="tdot" data-theme-set="rosa" role="radio" aria-label="Tema rosa"></button>
+        <button type="button" class="tdot" data-theme-set="verde" role="radio" aria-label="Tema verde"></button>
       </div>
       <span class="mono" id="loginClock">--:--</span>
     </div>
@@ -95,53 +94,38 @@
 
   <!-- ===== Sidebar de vidro (glassy-sidebar) ===== -->
   <aside class="sidebar" id="sidebar" aria-label="Navegação">
-    <div class="themes" role="radiogroup" aria-label="Tema">
-      <button class="tdot" data-theme-set="mono" role="radio" aria-label="Tema preto e branco" title="Preto e branco"></button>
-      <button class="tdot" data-theme-set="ciano" role="radio" aria-label="Tema ciano" title="Ciano"></button>
-      <button class="tdot" data-theme-set="vermelho" role="radio" aria-label="Tema vermelho" title="Vermelho"></button>
-    </div>
-
-    <div class="brand">
-      <svg class="brand-logo"><use href="#logo"/></svg>
-      <span class="brand-meta mono"><b>IA TÁTICA</b><small>v1.1 · <span id="brandMode">ESTRATEGISTA</span></small></span>
-      <button class="toggle" id="toggle" aria-label="Recolher menu">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
-      </button>
-    </div>
-
-    <div class="user">
-      <div class="avatar" id="avatar">?</div>
-      <div class="meta"><b id="userName">—</b><small id="userRole">Comandante</small></div>
-      <span class="status-dot" id="statusDot" title="Status do núcleo"></span>
-    </div>
-
-    <button class="search" id="sbNew" data-action="new">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-      <span class="txt">Nova batalha</span><kbd class="txt">N</kbd>
+    <button class="toggle" id="toggle" aria-label="Recolher menu">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
 
     <div class="label"><span>MENU</span></div>
     <nav id="nav">
       <div class="pill" id="pill"></div>
       <a class="item active" href="#arena" data-view="arena" data-tip="Arena">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20 20 4M14 4h6v6M4 14l6 6M7 17l-3 3"/></svg><span class="txt">Arena</span><kbd class="txt">1</kbd></a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20 20 4M14 4h6v6M4 14l6 6M7 17l-3 3"/></svg><span class="txt">Arena</span></a>
       <a class="item" href="#arsenal" data-view="arsenal" data-tip="Arsenal">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"/><path d="M12 8v8M8 12h8"/></svg><span class="txt">Arsenal</span><span class="badge" id="modeBadge">6</span></a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"/><path d="M12 8v8M8 12h8"/></svg><span class="txt">Arsenal</span></a>
       <a class="item" href="#comando" data-view="comando" data-tip="Comando">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="txt">Comando</span><kbd class="txt">3</kbd></a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="txt">Comando</span></a>
       <a class="item" href="#historico" data-view="historico" data-tip="Histórico">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="txt">Histórico</span><span class="badge ghost" id="histBadge">0</span></a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="txt">Histórico</span></a>
       <a class="item" href="#" data-action="panel" data-tip="Painel tático">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M12 5V3M5 13H3M21 13h-2"/></svg><span class="txt">Painel tático</span><kbd class="txt">P</kbd></a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M12 5V3M5 13H3M21 13h-2"/></svg><span class="txt">Painel tático</span></a>
     </nav>
 
     <div class="label recent-label"><span>RECENTES</span></div>
     <div class="sb-recent" id="sbRecent"></div>
 
     <div class="sb-foot">
-      <div class="core-card">
+      <div class="core-card" data-tip="Status do núcleo">
         <span class="ring mini" id="sbRing"></span>
         <div class="txt"><b id="coreLabel">Verificando</b><small id="sbModel">núcleo</small></div>
+      </div>
+      <div class="user">
+        <button class="user-open" id="userOpen" data-tip="Perfil" aria-label="Abrir perfil">
+          <span class="avatar" id="avatar">?</span>
+          <span class="meta"><b id="userName">—</b><small id="userRole">Comandante</small></span>
+        </button>
         <button class="logout" id="logout" aria-label="Sair" data-tip="Sair">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg>
         </button>
@@ -157,8 +141,6 @@
       <header class="topbar">
         <div class="crumbs mono"><span>ARES</span><i>//</i><span id="crumbMode">ESTRATEGISTA</span><i>//</i><span id="crumbClock">--:--</span></div>
         <div class="top-actions">
-          <button class="chip ghost" data-action="panel" aria-label="Abrir painel tático">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="8"/><path d="M12 13l4-4"/></svg>Painel</button>
           <button class="chip ghost" data-action="new">Nova batalha</button>
         </div>
       </header>
@@ -171,7 +153,6 @@
           </div>
           <h1 class="sr-only">Ares</h1>
           <p class="hero-sub split" id="heroSub">Estratégia, força e precisão. O que vamos conquistar hoje?</p>
-          <div class="seeds" id="seeds"></div>
         </div>
         <div class="thread" id="thread" aria-live="polite"></div>
       </div>
@@ -218,10 +199,78 @@
     <!-- COMANDO: dashboard (dashboard-saas-premium) -->
     <section class="view" id="view-comando" aria-label="Comando">
       <header class="view-head">
-        <p class="mono kicker">COMANDO // RELATÓRIO DE CAMPO</p>
-        <h2 class="split">Seu histórico com a Ares, em números.</h2>
+        <p class="mono kicker">COMANDO // CENTRAL</p>
+        <h2 class="split" id="cmdTitle">Seu histórico com a Ares, em números.</h2>
+        <div class="tabs" role="tablist" aria-label="Seções do Comando" id="tabs">
+          <span class="tab-pill" id="tabPill"></span>
+          <button role="tab" class="tab on" data-tab="relatorio" aria-selected="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Relatório</button>
+          <button role="tab" class="tab" data-tab="aparencia" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>Aparência</button>
+          <button role="tab" class="tab" data-tab="perfil" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Perfil</button>
+        </div>
       </header>
-      <div class="dash" id="dash"></div>
+      <div class="panes">
+        <div class="pane on" data-pane="relatorio" role="tabpanel"><div class="dash" id="dash"></div></div>
+
+        <div class="pane" data-pane="aparencia" role="tabpanel">
+          <div class="settings">
+            <section class="set-card wide">
+              <h3>Tema</h3><p class="hint">A cor dos detalhes em toda a Ares, inclusive no login.</p>
+              <div class="theme-grid" id="themeGrid" role="radiogroup" aria-label="Tema"></div>
+            </section>
+            <section class="set-card">
+              <h3>Brilho</h3><p class="hint">Intensidade do neon. Também fica no painel tático.</p>
+              <div class="range-row"><input type="range" id="glowRange" min="0" max="100" step="1" aria-label="Brilho"><b id="glowRangeVal">70%</b></div>
+              <h3 class="mt">Tamanho do texto</h3>
+              <div class="seg" id="fontSeg" role="radiogroup" aria-label="Tamanho do texto">
+                <button role="radio" data-font="p">Compacto</button><button role="radio" data-font="m">Padrão</button><button role="radio" data-font="g">Grande</button>
+              </div>
+            </section>
+            <section class="set-card">
+              <h3>Efeitos</h3><p class="hint">Desligue o que achar demais.</p>
+              <div class="toggles" id="fxToggles">
+                <label class="tgl"><span>Estrelas e estrelas cadentes</span><input type="checkbox" data-fx="stars"><i></i></label>
+                <label class="tgl"><span>Grade hexagonal no cursor</span><input type="checkbox" data-fx="hex"><i></i></label>
+                <label class="tgl"><span>Aurora de fundo</span><input type="checkbox" data-fx="aurora"><i></i></label>
+                <label class="tgl"><span>Cursor personalizado</span><input type="checkbox" data-fx="cursor"><i></i></label>
+                <label class="tgl"><span>Reduzir animações</span><input type="checkbox" data-fx="calm"><i></i></label>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <div class="pane" data-pane="perfil" role="tabpanel">
+          <form class="settings" id="profileForm" autocomplete="off">
+            <section class="set-card profile-card">
+              <div class="avatar-big" id="avatarBig">?</div>
+              <div class="avatar-actions">
+                <label class="btn ghost small">Trocar foto<input type="file" id="avatarFile" accept="image/*" hidden></label>
+                <button type="button" class="btn ghost small" id="avatarRemove">Remover</button>
+              </div>
+              <p class="hint center">A foto fica salva só neste navegador.</p>
+            </section>
+            <section class="set-card grow">
+              <div class="form-grid">
+                <label class="field"><span class="mono">CODINOME</span><input id="pfName" maxlength="32" required></label>
+                <label class="field"><span class="mono">TÍTULO</span><input id="pfTitle" maxlength="28" placeholder="Comandante"></label>
+                <label class="field span2"><span class="mono">COMO A ARES DEVE TE CHAMAR</span><input id="pfCall" maxlength="40" placeholder="Ex.: comandante, Nathan, chefe"></label>
+                <label class="field span2"><span class="mono">SOBRE VOCÊ <em id="pfAboutCount">0/300</em></span>
+                  <textarea id="pfAbout" maxlength="300" rows="3" placeholder="O que a Ares deve saber para te ajudar melhor (sua área, objetivos, estilo de resposta)"></textarea></label>
+              </div>
+              <div class="form-actions">
+                <span class="saved" id="pfSaved" role="status"></span>
+                <button class="btn solid" type="submit">Salvar perfil</button>
+              </div>
+            </section>
+            <section class="set-card wide danger">
+              <div><h3>Dados</h3><p class="hint">Conversas, perfil e preferências ficam salvos só neste navegador.</p></div>
+              <button type="button" class="btn ghost small" id="wipe">Apagar todas as conversas</button>
+            </section>
+          </form>
+        </div>
+      </div>
     </section>
 
     <!-- HISTÓRICO -->
