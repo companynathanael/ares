@@ -24,6 +24,16 @@ A Ares abre numa tela de login. Sem senha configurada, ela pede só o **codinome
 Com `ARES_SENHA=...` no `.env`, a tela pede também a senha e o servidor só responde a quem entrou
 (sessão em cookie HttpOnly de 7 dias e no máximo 5 tentativas por minuto). O botão de sair fica no rodapé do menu.
 
+## Animação de entrada
+
+Ao abrir, a Ares liga como um sistema (cerca de 4,5 s): linha de energia, milhares de partículas que montam a logo em espiral
+(amostradas do próprio desenho da logo), anéis HUD, log de inicialização com progresso, logo com falha digital,
+nome decodificado e uma onda de choque que revela a tela. Usa a cor do tema.
+
+- Pula com clique, `Esc`, `Enter` ou espaço.
+- Toca uma vez por sessão do navegador; desliga ou revê em **Comando → Aparência → Animação de entrada**.
+- Não toca se o sistema pedir menos movimento.
+
 ## Comando (engrenagem)
 
 - **Relatório:** números e gráficos das suas conversas.

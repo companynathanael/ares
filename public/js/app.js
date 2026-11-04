@@ -558,7 +558,7 @@ npm start
   $('#glowRange').addEventListener('input', e => { applyGlow(+e.target.value); glowDial.set(+e.target.value); });
 
   /* ---------- aparência: efeitos e tamanho do texto ---------- */
-  const FXDEF = { stars: true, hex: true, aurora: true, cursor: true, calm: false };
+  const FXDEF = { stars: true, hex: true, aurora: true, cursor: true, calm: false, intro: true };
   S.fx = Object.assign({}, FXDEF, store.get('fx', {}));
   function applyFx() {
     const h = document.documentElement;
@@ -568,6 +568,9 @@ npm start
   }
   $$('[data-fx]').forEach(i => i.addEventListener('change', () => { S.fx[i.dataset.fx] = i.checked; store.set('fx', S.fx); applyFx(); }));
   applyFx();
+  const replay = e => { e.preventDefault(); e.stopPropagation(); window.AresIntro?.play(); };
+  $('#introReplay').addEventListener('click', replay);
+  $('#introReplay').addEventListener('keydown', e => (e.key === 'Enter' || e.key === ' ') && replay(e));
   function setFont(f) {
     S.font = f; store.set('font', f); document.documentElement.dataset.size = f;
     $$('[data-font]').forEach(b => b.setAttribute('aria-checked', b.dataset.font === f));
