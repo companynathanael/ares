@@ -31,8 +31,7 @@ Ao abrir, a Ares liga como um sistema (cerca de 4,5 s): linha de energia, milhar
 nome decodificado e uma onda de choque que revela a tela. Usa a cor do tema.
 
 - Pula com clique, `Esc`, `Enter` ou espaço.
-- Toca uma vez por sessão do navegador; desliga ou revê em **Comando → Aparência → Animação de entrada**.
-- Não toca se o sistema pedir menos movimento.
+- Toca a cada vez que a página abre (inclusive no F5 e antes do login); desliga ou revê em **Comando → Aparência → Animação de entrada**.
 
 ## Comando (engrenagem)
 

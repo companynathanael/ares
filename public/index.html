@@ -17,7 +17,8 @@
     var h = document.documentElement, t = JSON.parse(localStorage.getItem('ares.theme') || 'null');
     if (t) h.dataset.theme = t;
     var fx = JSON.parse(localStorage.getItem('ares.fx') || '{}');
-    var skip = fx.intro === false || sessionStorage.getItem('ares.introSeen') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // toca em todo carregamento (inclusive F5 e antes do login); só não toca se a pessoa desligar em Aparência
+    var skip = fx.intro === false;
     h.classList.add(skip ? 'no-intro' : 'intro-on');
   } catch (e) { document.documentElement.classList.add('no-intro'); }
 </script>

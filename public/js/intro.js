@@ -5,7 +5,7 @@
    3. anéis HUD se desenham, log de boot e progresso
    4. logo sólida com falha digital + nome decodificado
    5. onda de choque abre um buraco e revela a Ares
-   Pula com clique, Esc, Enter ou espaço. Toca uma vez por sessão.
+   Pula com clique, Esc, Enter ou espaço. Toca a cada carregamento da página.
    ===================================================================== */
 (function () {
   const root = document.documentElement;
@@ -16,7 +16,6 @@
   if (lp && !lp.getAttribute('d')) lp.setAttribute('d', window.ARES_LOGO_PATH);
   const $ = s => el.querySelector(s);
   const cv = $('#introCanvas'), ctx = cv.getContext('2d');
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let W, H, DPR, CX, CY, LW, LH, parts = [], raf = 0, t0 = 0, state = 'idle', exitAt = 0, timers = [];
 
   const accentRGB = () => getComputedStyle(root).getPropertyValue('--accent-rgb').trim() || '34,230,255';
@@ -203,7 +202,6 @@
     if (state === 'running') return;
     timers.forEach(clearTimeout); timers = [];
     state = 'running';
-    try { sessionStorage.setItem('ares.introSeen', '1'); } catch {}
     root.classList.add('intro-on'); root.classList.remove('no-intro');
     el.hidden = false; el.className = 'intro run';
     layout(); sample(); ticks(); bootLog();
@@ -237,6 +235,6 @@
   addEventListener('resize', () => { if (state === 'running') { layout(); sample(); } });
 
   window.AresIntro = { play, skip: exit };
-  if (root.classList.contains('no-intro') || reduce) { el.hidden = true; root.classList.remove('intro-on'); }
+  if (root.classList.contains('no-intro')) { el.hidden = true; root.classList.remove('intro-on'); }
   else play();
 })();
